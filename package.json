@@ -1,0 +1,63 @@
+{
+  "name": "stratifyjs",
+  "version": "1.0.0",
+  "description": "Enforce architectural layer boundaries in monorepos",
+  "type": "module",
+  "bin": {
+    "stratify": "./lib/cli/index.js"
+  },
+  "main": "./lib/api/index.js",
+  "types": "./lib/api/index.d.ts",
+  "exports": {
+    ".": {
+      "source": "./src/api/index.ts",
+      "types": "./lib/api/index.d.ts",
+      "default": "./lib/api/index.js"
+    },
+    "./cli": {
+      "source": "./src/cli/index.ts",
+      "types": "./lib/cli/index.d.ts",
+      "default": "./lib/cli/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsc -p tsconfig.json --watch",
+    "start": "node lib/cli/index.js",
+    "test": "node lib/cli/index.js --config stratify.config.json",
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "yarn test && yarn build"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/smikula/stratifyjs.git"
+  },
+  "bugs": {
+    "url": "https://github.com/smikula/stratifyjs/issues"
+  },
+  "homepage": "https://github.com/smikula/stratifyjs#readme",
+  "keywords": [
+    "monorepo",
+    "architecture",
+    "layers",
+    "dependency",
+    "enforcement"
+  ],
+  "files": [
+    "lib/",
+    "bin/",
+    "README.md",
+    "LICENSE"
+  ],
+  "dependencies": {
+    "commander": "^14.0.3",
+    "glob": "^10.0.0",
+    "picocolors": "^1.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^25.2.3",
+    "prettier": "^3.8.1",
+    "typescript": "^5.3.2"
+  },
+  "license": "MIT"
+}

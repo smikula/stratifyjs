@@ -1,0 +1,6 @@
+{
+    "name": "@sample/infra",
+    "version": "1.0.0",
+    "layer": "infra",
+    "dependencies": {}
+}

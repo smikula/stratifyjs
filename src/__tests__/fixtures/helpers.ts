@@ -1,0 +1,57 @@
+import type { ResolvedConfig, Package, Violation, ViolationType } from '../../types/types.js';
+
+/**
+ * Creates a ResolvedConfig with the standard 3-layer setup (ui → core → infra).
+ *
+ * Usage:
+ *   const config = createTestConfig(); // all defaults
+ *   const config = createTestConfig({ enforcement: { mode: 'error' } }); // override mode
+ *
+ * The `Partial<ResolvedConfig>` parameter uses TypeScript's Partial utility type,
+ * which makes every property optional. Spread (`...`) merges overrides on top of defaults.
+ */
+export function createTestConfig(overrides?: Partial<ResolvedConfig>): ResolvedConfig {
+    return {
+        layers: {
+            ui: { allowedDependencies: ['core'] },
+            core: { allowedDependencies: ['infra'] },
+            infra: { allowedDependencies: [] },
+        },
+        enforcement: { mode: 'warn' },
+        workspaces: { patterns: ['packages/**/*'] },
+        ...overrides,
+    };
+}
+
+/**
+ * Creates a Package with sensible defaults.
+ *
+ * Usage:
+ *   const pkg = createTestPackage(); // default "test-pkg" in "core"
+ *   const pkg = createTestPackage({ name: '@my/ui', layer: 'ui' }); // override name and layer
+ */
+export function createTestPackage(overrides?: Partial<Package>): Package {
+    return {
+        name: 'test-pkg',
+        layer: 'core',
+        dependencies: [],
+        path: 'packages/test-pkg',
+        ...overrides,
+    };
+}
+
+/**
+ * Creates a Violation with sensible defaults.
+ *
+ * Usage:
+ *   const v = createTestViolation(); // default missing-layer
+ *   const v = createTestViolation({ type: 'invalid-dependency', package: '@my/ui' });
+ */
+export function createTestViolation(overrides?: Partial<Violation>): Violation {
+    return {
+        type: 'missing-layer' as ViolationType,
+        package: 'test-pkg',
+        message: 'Test violation',
+        ...overrides,
+    };
+}

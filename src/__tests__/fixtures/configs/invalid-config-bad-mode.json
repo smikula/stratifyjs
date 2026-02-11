@@ -1,0 +1,10 @@
+{
+    "layers": {
+        "core": {
+            "allowedDependencies": []
+        }
+    },
+    "enforcement": {
+        "mode": "strict"
+    }
+}

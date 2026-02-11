@@ -1,0 +1,8 @@
+{
+    "name": "@sample/core-lib",
+    "version": "1.0.0",
+    "layer": "core",
+    "dependencies": {
+        "@sample/infra": "workspace:*"
+    }
+}

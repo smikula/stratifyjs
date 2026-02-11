@@ -330,6 +330,25 @@ Add to your CI pipeline to enforce boundaries on every PR:
   displayName: 'Enforce layer boundaries'
 ```
 
+## Development
+
+```bash
+# Install dependencies
+yarn install
+
+# Run tests
+yarn test
+
+# Run tests in watch mode
+yarn test:watch
+
+# Build (compile TypeScript → lib/)
+yarn build
+
+# Type-check without emitting
+yarn typecheck
+```
+
 ## License
 
 MIT

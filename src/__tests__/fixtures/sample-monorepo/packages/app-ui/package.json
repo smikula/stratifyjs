@@ -1,0 +1,8 @@
+{
+    "name": "@sample/app-ui",
+    "version": "1.0.0",
+    "layer": "ui",
+    "dependencies": {
+        "@sample/core-lib": "workspace:*"
+    }
+}

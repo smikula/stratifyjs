@@ -1,0 +1,22 @@
+{
+    "layers": {
+        "ui": {
+            "description": "User interface packages",
+            "allowedDependencies": ["core"]
+        },
+        "core": {
+            "description": "Core business logic",
+            "allowedDependencies": ["infra"]
+        },
+        "infra": {
+            "description": "Infrastructure and utilities",
+            "allowedDependencies": []
+        }
+    },
+    "enforcement": {
+        "mode": "error"
+    },
+    "workspaces": {
+        "patterns": ["packages/*"]
+    }
+}

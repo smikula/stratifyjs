@@ -1,0 +1,8 @@
+{
+    "name": "@sample/bad-pkg",
+    "version": "1.0.0",
+    "layer": "ui",
+    "dependencies": {
+        "@sample/infra": "workspace:*"
+    }
+}

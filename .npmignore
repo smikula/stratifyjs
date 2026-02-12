@@ -1,0 +1,22 @@
+# Source files
+src/
+
+# Tests (exclude from lib/)
+**/__tests__/
+**/*.test.js
+**/*.test.d.ts
+
+# Configuration files
+tsconfig.json
+jest.config.mjs
+.prettierrc
+.prettierignore
+
+# Git and development
+.git
+.gitignore
+.claude/
+
+# Documentation and lock files
+ARCHITECTURE.md
+yarn.lock

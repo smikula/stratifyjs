@@ -27,7 +27,9 @@
     "test": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js",
     "test:watch": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js --watch",
     "typecheck": "tsc --noEmit",
-    "prepublishOnly": "yarn build && yarn test"
+    "prepublishOnly": "yarn build && yarn test",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
   },
   "repository": {
     "type": "git",

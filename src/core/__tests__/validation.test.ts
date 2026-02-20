@@ -1,9 +1,9 @@
 import { validatePackages } from '../validation.js';
 import { createTestConfig, createTestPackage } from '../../__tests__/fixtures/helpers.js';
-import type { Package, ResolvedConfig } from '../../types/types.js';
+import type { Package, StratifyConfig } from '../../types/types.js';
 
 describe('validatePackages', () => {
-    let config: ResolvedConfig;
+    let config: StratifyConfig;
 
     beforeEach(() => {
         config = createTestConfig();
@@ -34,6 +34,9 @@ describe('validatePackages', () => {
         expect(violations[0].type).toBe('missing-layer');
         expect(violations[0].package).toBe('@app/no-layer');
         expect(violations[0].message).toContain('missing');
+        // detailedMessage should include actionable guidance
+        expect(violations[0].detailedMessage).toContain('@app/no-layer');
+        expect(violations[0].detailedMessage).toContain('Missing Layer');
     });
 
     // ── Unknown layer ──────────────────────────────────────────────────

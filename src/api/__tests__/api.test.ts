@@ -1,6 +1,7 @@
 import { fileURLToPath } from 'url';
 import { dirname, resolve } from 'path';
-import { enforceLayersAsync, validateConfig, formatResults } from '../api.js';
+import { validateLayers } from '../api.js';
+import { StratifyError } from '../../core/errors.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -8,41 +9,36 @@ const FIXTURES_DIR = resolve(__dirname, '..', '..', '__tests__', 'fixtures');
 const MONOREPO_DIR = resolve(FIXTURES_DIR, 'sample-monorepo');
 const CONFIGS_DIR = resolve(FIXTURES_DIR, 'configs');
 
-describe('enforceLayersAsync', () => {
+describe('validateLayers', () => {
     it('runs the full pipeline and finds the expected violation', async () => {
-        // Load config from the fixture file, discover from sample monorepo
-        const result = await enforceLayersAsync({
+        const result = await validateLayers({
             workspaceRoot: MONOREPO_DIR,
             configPath: resolve(CONFIGS_DIR, 'valid-config.json'),
         });
 
-        expect(result.success).toBe(true);
-        if (result.success) {
-            const { packages, violations, report, config } = result.value;
+        expect(result.totalPackages).toBe(4);
+        expect(result.violations).toHaveLength(1);
+        expect(result.violations[0].type).toBe('invalid-dependency');
+        expect(result.violations[0].package).toBe('@sample/bad-pkg');
+        expect(result.violations[0].details?.toLayer).toBe('infra');
+        expect(result.violations[0].details?.fromLayer).toBe('ui');
+        expect(result.duration).toBeGreaterThan(0);
+    });
 
-            // Should discover all 4 packages
-            expect(packages).toHaveLength(4);
+    it('populates detailedMessage on each violation', async () => {
+        const result = await validateLayers({
+            workspaceRoot: MONOREPO_DIR,
+            configPath: resolve(CONFIGS_DIR, 'valid-config.json'),
+        });
 
-            // Config should be loaded correctly
-            expect(config.enforcement.mode).toBe('error');
-            expect(Object.keys(config.layers)).toHaveLength(3);
-
-            // Should find exactly 1 violation: bad-pkg (ui) → infra
-            expect(violations).toHaveLength(1);
-            expect(violations[0].type).toBe('invalid-dependency');
-            expect(violations[0].package).toBe('@sample/bad-pkg');
-            expect(violations[0].details?.toLayer).toBe('infra');
-            expect(violations[0].details?.fromLayer).toBe('ui');
-
-            // Report should reflect the violation
-            expect(report.violationCount).toBe(1);
-            expect(report.totalPackages).toBe(4);
+        for (const v of result.violations) {
+            expect(v.detailedMessage).toBeDefined();
+            expect(v.detailedMessage.length).toBeGreaterThan(v.message.length);
         }
     });
 
     it('works with a pre-built config (skips file loading)', async () => {
-        // Provide config directly instead of loading from file
-        const result = await enforceLayersAsync({
+        const result = await validateLayers({
             workspaceRoot: MONOREPO_DIR,
             config: {
                 layers: {
@@ -55,21 +51,17 @@ describe('enforceLayersAsync', () => {
             },
         });
 
-        expect(result.success).toBe(true);
-        if (result.success) {
-            expect(result.value.packages).toHaveLength(4);
-            // Same violation as above — config structure is equivalent
-            expect(result.value.violations).toHaveLength(1);
-            expect(result.value.violations[0].package).toBe('@sample/bad-pkg');
-        }
+        expect(result.totalPackages).toBe(4);
+        expect(result.violations).toHaveLength(1);
+        expect(result.violations[0].package).toBe('@sample/bad-pkg');
     });
 
     it('returns zero violations when all dependencies are allowed via wildcard', async () => {
-        const result = await enforceLayersAsync({
+        const result = await validateLayers({
             workspaceRoot: MONOREPO_DIR,
             config: {
                 layers: {
-                    ui: { allowedDependencies: ['*'] }, // allow everything
+                    ui: { allowedDependencies: ['*'] },
                     core: { allowedDependencies: ['*'] },
                     infra: { allowedDependencies: [] },
                 },
@@ -78,78 +70,30 @@ describe('enforceLayersAsync', () => {
             },
         });
 
-        expect(result.success).toBe(true);
-        if (result.success) {
-            expect(result.value.violations).toHaveLength(0);
+        expect(result.violations).toHaveLength(0);
+    });
+
+    it('throws StratifyError when config file does not exist', async () => {
+        await expect(
+            validateLayers({
+                workspaceRoot: MONOREPO_DIR,
+                configPath: 'nonexistent.json',
+            })
+        ).rejects.toThrow(StratifyError);
+
+        try {
+            await validateLayers({
+                workspaceRoot: MONOREPO_DIR,
+                configPath: 'nonexistent.json',
+            });
+        } catch (e) {
+            expect(e).toBeInstanceOf(StratifyError);
+            expect((e as StratifyError).type).toBe('config-not-found');
         }
     });
 
-    it('returns config-not-found when config file does not exist', async () => {
-        const result = await enforceLayersAsync({
-            workspaceRoot: MONOREPO_DIR,
-            configPath: 'nonexistent.json',
-        });
-
-        expect(result.success).toBe(false);
-        if (!result.success) {
-            expect(result.error.type).toBe('config-not-found');
-        }
-    });
-
-    it('applies mode override from options', async () => {
-        const result = await enforceLayersAsync({
-            workspaceRoot: MONOREPO_DIR,
-            config: {
-                layers: {
-                    ui: { allowedDependencies: ['core'] },
-                    core: { allowedDependencies: ['infra'] },
-                    infra: { allowedDependencies: [] },
-                },
-                enforcement: { mode: 'warn' },
-                workspaces: { patterns: ['packages/*'] },
-            },
-            mode: 'off', // override from options
-        });
-
-        expect(result.success).toBe(true);
-        if (result.success) {
-            // The mode override should be reflected in the config
-            expect(result.value.config.enforcement.mode).toBe('off');
-        }
-    });
-});
-
-describe('validateConfig', () => {
-    it('validates and applies defaults to a raw config object', () => {
-        const raw = {
-            layers: {
-                core: { allowedDependencies: [] },
-            },
-        };
-
-        const result = validateConfig(raw);
-
-        expect(result.success).toBe(true);
-        if (result.success) {
-            // Defaults should be applied
-            expect(result.value.enforcement.mode).toBe('warn');
-            expect(result.value.workspaces.patterns).toEqual(['packages/**/*']);
-        }
-    });
-
-    it('rejects invalid raw config', () => {
-        const result = validateConfig({ enforcement: { mode: 'warn' } });
-
-        expect(result.success).toBe(false);
-        if (!result.success) {
-            expect(result.error.type).toBe('config-validation-error');
-        }
-    });
-});
-
-describe('formatResults', () => {
-    it('formats as console text by default', async () => {
-        const result = await enforceLayersAsync({
+    it('returns duration as a positive number', async () => {
+        const result = await validateLayers({
             workspaceRoot: MONOREPO_DIR,
             config: {
                 layers: {
@@ -162,37 +106,6 @@ describe('formatResults', () => {
             },
         });
 
-        expect(result.success).toBe(true);
-        if (result.success) {
-            const output = formatResults(result.value);
-            // Should contain violation info
-            expect(output).toContain('1 layer violation');
-            expect(output).toContain('Completed in');
-        }
-    });
-
-    it('formats as JSON when requested', async () => {
-        const result = await enforceLayersAsync({
-            workspaceRoot: MONOREPO_DIR,
-            config: {
-                layers: {
-                    ui: { allowedDependencies: ['core'] },
-                    core: { allowedDependencies: ['infra'] },
-                    infra: { allowedDependencies: [] },
-                },
-                enforcement: { mode: 'error' },
-                workspaces: { patterns: ['packages/*'] },
-            },
-        });
-
-        expect(result.success).toBe(true);
-        if (result.success) {
-            const output = formatResults(result.value, 'json');
-            // Should be valid JSON
-            const parsed = JSON.parse(output);
-            expect(parsed.violationCount).toBe(1);
-            expect(parsed.violations).toHaveLength(1);
-            expect(parsed.totalPackages).toBe(4);
-        }
+        expect(result.duration).toBeGreaterThan(0);
     });
 });

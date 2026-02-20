@@ -6,10 +6,10 @@ import { toLibraryOptions } from './options.js';
 import { logInfo, logSuccess, logError, logGray, logPlain } from './output-helpers.js';
 
 /**
- * Handle the main enforce command.
+ * Handle the main validate command.
  * Returns an exit code: 0 = success, 1 = failure.
  */
-export async function handleEnforceCommand(options: CliOptions): Promise<number> {
+export async function handleValidateCommand(options: CliOptions): Promise<number> {
     const workspaceRoot = resolve(options.root);
     const configPath = resolve(workspaceRoot, options.config);
 

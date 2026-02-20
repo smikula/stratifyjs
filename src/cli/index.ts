@@ -2,7 +2,7 @@
 import { program } from 'commander';
 import { createRequire } from 'module';
 import { parseCliOptions } from './options.js';
-import { handleEnforceCommand } from './command-handler.js';
+import { handleValidateCommand } from './command-handler.js';
 
 const require = createRequire(import.meta.url);
 const { version } = require('../../package.json') as { version: string };
@@ -19,7 +19,7 @@ program
 
 const options = parseCliOptions(program.opts());
 
-handleEnforceCommand(options)
+handleValidateCommand(options)
     .then(code => process.exit(code))
     .catch(error => {
         console.error('Fatal error:', error);

@@ -1,15 +1,15 @@
 import { resolve } from 'path';
-import { enforceLayersAsync, formatResults } from '../api/api.js';
-import { formatLayerError } from '../api/index.js';
+import { validateLayers } from '../api/api.js';
+import { StratifyError } from '../core/errors.js';
 import type { CliOptions } from './options.js';
 import { toLibraryOptions } from './options.js';
-import { logInfo, logSuccess, logWarning, logError, logGray, logPlain } from './output-helpers.js';
+import { logInfo, logSuccess, logError, logGray, logPlain } from './output-helpers.js';
 
 /**
- * Handle the main enforce command.
+ * Handle the main validate command.
  * Returns an exit code: 0 = success, 1 = failure.
  */
-export async function handleEnforceCommand(options: CliOptions): Promise<number> {
+export async function handleValidateCommand(options: CliOptions): Promise<number> {
     const workspaceRoot = resolve(options.root);
     const configPath = resolve(workspaceRoot, options.config);
 
@@ -17,43 +17,51 @@ export async function handleEnforceCommand(options: CliOptions): Promise<number>
     logGray(`Root: ${workspaceRoot}`);
     logGray(`Config: ${configPath}\n`);
 
-    const result = await enforceLayersAsync(toLibraryOptions(options));
+    try {
+        const result = await validateLayers(toLibraryOptions(options));
 
-    if (!result.success) {
-        logError(`❌ ${formatLayerError(result.error)}`);
-        return 1;
-    }
+        const effectiveMode = options.mode ?? 'warn';
 
-    const { config, packages, violations, warnings } = result.value;
-    const effectiveMode = options.mode ?? config.enforcement.mode;
+        logSuccess(`✅ Discovered ${result.totalPackages} packages\n`);
 
-    logSuccess(`✅ Loaded config with ${Object.keys(config.layers).length} layers`);
-    logGray(`   Mode: ${effectiveMode}\n`);
-    logSuccess(`✅ Discovered ${packages.length} packages\n`);
-    if (warnings.length > 0) {
-        logWarning(`⚠️  ${warnings.length} warnings\n`);
-        for (const warning of warnings) {
-            logWarning(`   • ${warning.path}: ${warning.message}`);
-        }
-        logPlain('');
-    }
-
-    // Get plain text report from formatter, add colors here
-    const plainReport = formatResults(result.value, options.format, effectiveMode);
-
-    if (options.format === 'json') {
-        logPlain(plainReport);
-    } else {
-        if (violations.length > 0) {
-            logError(plainReport);
+        if (options.format === 'json') {
+            logPlain(
+                JSON.stringify(
+                    {
+                        violations: result.violations,
+                        totalPackages: result.totalPackages,
+                        duration: result.duration,
+                    },
+                    null,
+                    2
+                )
+            );
         } else {
-            logSuccess(plainReport);
+            if (result.violations.length === 0) {
+                logSuccess('✅ All packages comply with layer rules!');
+            } else {
+                logError(`❌ Found ${result.violations.length} layer violation(s):\n`);
+                for (const v of result.violations) {
+                    logError(v.detailedMessage);
+                    logPlain('');
+                }
+                if (effectiveMode === 'warn') {
+                    logPlain('⚠️  Enforcement mode: warn — not failing build');
+                }
+            }
         }
-    }
 
-    if (effectiveMode === 'error' && violations.length > 0) {
+        if (effectiveMode === 'error' && result.violations.length > 0) {
+            return 1;
+        }
+
+        return 0;
+    } catch (error) {
+        if (error instanceof StratifyError) {
+            logError(`❌ ${error.message}`);
+        } else {
+            logError(`❌ Unexpected error: ${error}`);
+        }
         return 1;
     }
-
-    return 0;
 }

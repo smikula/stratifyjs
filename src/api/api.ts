@@ -1,62 +1,72 @@
 import { resolve } from 'path';
-import type { ResolvedConfig, Violation, Package, EnforcementConfig } from '../types/types.js';
-import type { LayerError, ConfigError } from '../core/errors.js';
-import type { Result } from '../core/result.js';
-import { ok } from '../core/result.js';
-import { validateConfigSchema } from '../core/config-schema.js';
-import { applyDefaults } from '../core/config-defaults.js';
+import type { StratifyConfig, Violation } from '../types/types.js';
+import { StratifyError } from '../core/errors.js';
 import { validatePackages } from '../core/validation.js';
 import { loadConfigFromFile } from '../adapters/config-file-loader.js';
-import { discoverPackages, type DiscoveryWarning } from '../adapters/file-system-discovery.js';
-import { buildReport, type ValidationReport } from '../core/report-builder.js';
-import { formatConsole } from '../core/formatters/console-formatter.js';
-import { formatJson } from '../core/formatters/json-formatter.js';
+import { discoverPackages } from '../adapters/file-system-discovery.js';
 
 /**
- * Options for the enforce-layers library API.
+ * Options for the validateLayers API.
  */
-export interface EnforceLayersOptions {
+export interface ValidateLayersOptions {
     /** Workspace root directory. Defaults to process.cwd(). */
     workspaceRoot?: string;
     /** Path to the config file, relative to workspaceRoot. */
     configPath?: string;
     /** Provide a pre-built config directly, skipping file loading. */
-    config?: ResolvedConfig;
+    config?: StratifyConfig;
     /** Override the enforcement mode from config. */
-    mode?: EnforcementConfig['mode'];
+    mode?: 'error' | 'warn' | 'off';
 }
 
 /**
- * Result of running layer enforcement.
+ * Result of running layer validation.
  */
-export interface EnforceLayersResult {
+export interface ValidateLayersResult {
     violations: Violation[];
-    packages: Package[];
-    config: ResolvedConfig;
-    report: ValidationReport;
-    warnings: DiscoveryWarning[];
+    totalPackages: number;
+    duration: number;
 }
 
 /**
- * Run layer enforcement programmatically.
- * Returns a Result
+ * Validate monorepo packages against architectural layer rules.
+ *
+ * @param options - Configuration and workspace options.
+ * @returns Violations found, total package count, and duration.
+ * @throws {StratifyError} On config loading/parsing or package discovery failures.
+ *
+ * @example
+ * ```ts
+ * import { validateLayers, StratifyError } from 'stratifyjs';
+ *
+ * try {
+ *   const result = await validateLayers({ workspaceRoot: '.' });
+ *   for (const v of result.violations) {
+ *     console.log(v.detailedMessage);
+ *   }
+ * } catch (e) {
+ *   if (e instanceof StratifyError) {
+ *     console.error(e.message);
+ *   }
+ * }
+ * ```
  */
-export async function enforceLayersAsync(
-    options: EnforceLayersOptions = {}
-): Promise<Result<EnforceLayersResult, LayerError>> {
+export async function validateLayers(
+    options: ValidateLayersOptions = {}
+): Promise<ValidateLayersResult> {
     const startTime = performance.now();
 
     const workspaceRoot = resolve(options.workspaceRoot ?? process.cwd());
 
     // Resolve config
-    let config: ResolvedConfig;
+    let config: StratifyConfig;
     if (options.config) {
         config = options.config;
     } else {
         const configPath = options.configPath ?? 'stratify.config.json';
         const configResult = await loadConfigFromFile(workspaceRoot, configPath);
         if (!configResult.success) {
-            return configResult;
+            throw new StratifyError(configResult.error);
         }
         config = configResult.value;
     }
@@ -72,48 +82,15 @@ export async function enforceLayersAsync(
     // Discover packages
     const discoveryResult = await discoverPackages(workspaceRoot, config.workspaces);
     if (!discoveryResult.success) {
-        return discoveryResult;
+        throw new StratifyError(discoveryResult.error);
     }
 
-    const { packages, warnings } = discoveryResult.value;
+    const { packages } = discoveryResult.value;
 
     // Validate packages against config
     const violations = validatePackages(packages, config);
 
     const duration = performance.now() - startTime;
-    const report = buildReport(violations, {
-        totalPackages: packages.length,
-        duration,
-    });
 
-    return ok({ violations, packages, config, report, warnings });
-}
-
-/**
- * Validate a raw config object without reading from a file.
- * Useful for editor integrations or programmatic config construction.
- */
-export function validateConfig(raw: unknown): Result<ResolvedConfig, ConfigError> {
-    const validated = validateConfigSchema(raw);
-    if (!validated.success) {
-        return validated;
-    }
-    return ok(applyDefaults(validated.value));
-}
-
-/**
- * Format an enforcement result for display.
- */
-export function formatResults(
-    result: EnforceLayersResult,
-    format: 'console' | 'json' = 'console',
-    mode: EnforcementConfig['mode'] = 'warn'
-): string {
-    switch (format) {
-        case 'json':
-            return formatJson(result.report);
-        case 'console':
-        default:
-            return formatConsole(result.report, mode);
-    }
+    return { violations, totalPackages: packages.length, duration };
 }

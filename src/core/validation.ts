@@ -1,10 +1,10 @@
-import type { Package, ResolvedConfig, Violation } from '../types/types.js';
+import type { Package, StratifyConfig, Violation } from '../types/types.js';
 import { hasRequiredLayer, isKnownLayer, isDependencyAllowed } from './rules.js';
 
 /**
  * Validate all packages against layer configuration.
  */
-export function validatePackages(packages: Package[], config: ResolvedConfig): Violation[] {
+export function validatePackages(packages: Package[], config: StratifyConfig): Violation[] {
     const violations: Violation[] = [];
     const packageMap = new Map(packages.map(pkg => [pkg.name, pkg]));
 
@@ -15,6 +15,10 @@ export function validatePackages(packages: Package[], config: ResolvedConfig): V
                 type: 'missing-layer',
                 package: pkg.name,
                 message: `Package "${pkg.name}" is missing the required "layer" field in package.json`,
+                detailedMessage:
+                    `🏷️  Missing Layer: "${pkg.name}"\n` +
+                    `   Add a "layer" field to ${pkg.path}/package.json to assign this package to an architectural layer.\n` +
+                    `   Valid layers: ${Object.keys(config.layers).join(', ')}`,
             });
             continue; // Cannot validate further without layer
         }
@@ -23,14 +27,15 @@ export function validatePackages(packages: Package[], config: ResolvedConfig): V
 
         // Rule 2: Layer must be defined in config
         if (!isKnownLayer(layer, config.layers)) {
+            const validLayers = Object.keys(config.layers).join(', ');
             violations.push({
                 type: 'unknown-layer',
                 package: pkg.name,
-                message: `Package "${
-                    pkg.name
-                }" has unknown layer "${layer}". Valid layers: ${Object.keys(config.layers).join(
-                    ', '
-                )}`,
+                message: `Package "${pkg.name}" has unknown layer "${layer}". Valid layers: ${validLayers}`,
+                detailedMessage:
+                    `❓ Unknown Layer: "${pkg.name}" declares layer "${layer}", which is not defined in the config.\n` +
+                    `   Valid layers: ${validLayers}\n` +
+                    `   Fix the "layer" field in ${pkg.path}/package.json.`,
             });
             continue;
         }
@@ -44,10 +49,18 @@ export function validatePackages(packages: Package[], config: ResolvedConfig): V
             }
 
             if (!isDependencyAllowed(layer, depPkg.layer, layerDef.allowedDependencies)) {
+                const allowed =
+                    layerDef.allowedDependencies.length > 0
+                        ? layerDef.allowedDependencies.join(', ')
+                        : '(none)';
                 violations.push({
                     type: 'invalid-dependency',
                     package: pkg.name,
                     message: `Layer violation: "${pkg.name}" (${layer}) cannot depend on "${depPkg.name}" (${depPkg.layer})`,
+                    detailedMessage:
+                        `🚫 Invalid Dependency: "${pkg.name}" (layer: ${layer}) → "${depPkg.name}" (layer: ${depPkg.layer})\n` +
+                        `   The "${layer}" layer is only allowed to depend on: ${allowed}\n` +
+                        `   Remove the dependency or adjust layer rules in the config.`,
                     details: {
                         fromLayer: layer,
                         toPackage: depPkg.name,

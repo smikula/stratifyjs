@@ -45,9 +45,11 @@ export interface LayerConfig {
 }
 
 /**
- * Resolved config with all defaults applied
+ * Fully resolved stratify configuration with all defaults applied.
+ * This is the public config type — passed via options.config and
+ * used throughout the library.
  */
-export interface ResolvedConfig {
+export interface StratifyConfig {
     layers: LayerMap;
     workspaces: WorkspaceConfig;
     enforcement: EnforcementConfig;
@@ -65,6 +67,7 @@ export interface Violation {
     type: ViolationType;
     package: string;
     message: string;
+    detailedMessage: string;
     details?: {
         fromLayer?: string;
         toPackage?: string;

@@ -1,6 +1,6 @@
 import type {
     LayerConfig,
-    ResolvedConfig,
+    StratifyConfig,
     EnforcementConfig,
     WorkspaceConfig,
 } from '../types/types.js';
@@ -16,7 +16,7 @@ export const DEFAULT_WORKSPACES: WorkspaceConfig = {
 /**
  * Apply defaults to a validated LayerConfig, producing a fully resolved config.
  */
-export function applyDefaults(config: LayerConfig): ResolvedConfig {
+export function applyDefaults(config: LayerConfig): StratifyConfig {
     return {
         layers: config.layers,
         enforcement: {

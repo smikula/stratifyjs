@@ -1,4 +1,4 @@
-import type { EnforceLayersOptions } from '../api/api.js';
+import type { ValidateLayersOptions } from '../api/api.js';
 
 /**
  * Parsed CLI options.
@@ -25,7 +25,7 @@ export function parseCliOptions(raw: Record<string, unknown>): CliOptions {
 /**
  * Convert CLI options to library options.
  */
-export function toLibraryOptions(cli: CliOptions): EnforceLayersOptions {
+export function toLibraryOptions(cli: CliOptions): ValidateLayersOptions {
     return {
         workspaceRoot: cli.root,
         configPath: cli.config,

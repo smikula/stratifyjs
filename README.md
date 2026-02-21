@@ -100,64 +100,88 @@ stratify -c stratify.config.json -r ../.. -m error --format console
 
 ## Programmatic API
 
-The library API is available for custom tooling, editor integrations, or CI pipelines.
+The library exposes a single function for custom tooling, editor integrations, or CI pipelines.
 
-### `enforceLayersAsync(options?)`
+### `validateLayers(options?)`
 
-Run the full enforcement pipeline: load config → discover packages → validate → report.
+Validate monorepo packages against architectural layer rules.
 
 ```typescript
-import { enforceLayersAsync, formatResults } from 'stratifyjs';
+import { validateLayers, StratifyError } from 'stratifyjs';
 
-const result = await enforceLayersAsync({
-    workspaceRoot: '/path/to/monorepo',
-    configPath: 'stratify.config.json',
-    mode: 'error', // optional override
-});
+try {
+    const result = await validateLayers({
+        workspaceRoot: '/path/to/monorepo',
+        configPath: 'stratify.config.json',
+        mode: 'error', // optional override
+    });
 
-if (!result.success) {
-    console.error('Error:', result.error);
-    process.exit(1);
+    console.log(`Checked ${result.totalPackages} packages, found ${result.violations.length} violations`);
+
+    for (const v of result.violations) {
+        console.log(v.detailedMessage);
+    }
+} catch (error) {
+    if (error instanceof StratifyError) {
+        console.error(error.type, error.message);
+    }
 }
-
-const { violations, packages, config, report, warnings } = result.value;
-console.log(`Checked ${packages.length} packages, found ${violations.length} violations`);
-
-// Format for display
-const output = formatResults(result.value, 'console', 'warn');
-console.log(output);
 ```
 
-### `validateConfig(raw)`
+### Options
 
-Validate a raw config object without reading from disk. Useful for editor integrations.
+| Field           | Type             | Default                  | Description                                    |
+| --------------- | ---------------- | ------------------------ | ---------------------------------------------- |
+| `workspaceRoot` | `string`         | `process.cwd()`          | Workspace root directory                       |
+| `configPath`    | `string`         | `'stratify.config.json'` | Path to config file, relative to workspaceRoot |
+| `config`        | `StratifyConfig` | —                        | Pre-built config (skips file loading)          |
+| `mode`          | `string`         | From config              | Override: `'error'`, `'warn'`, or `'off'`      |
+
+### Result
+
+| Field           | Type          | Description                        |
+| --------------- | ------------- | ---------------------------------- |
+| `violations`    | `Violation[]` | All violations found               |
+| `totalPackages` | `number`      | Number of discovered packages      |
+| `duration`      | `number`      | Elapsed time in milliseconds       |
+
+Each `Violation` has a short `message` for programmatic use and a rich `detailedMessage` with actionable context for human-readable output.
+
+### Pre-built config
+
+You can pass a config object directly instead of loading from a file:
 
 ```typescript
-import { validateConfig } from 'stratifyjs';
+import { validateLayers } from 'stratifyjs';
 
-const result = validateConfig({
-    layers: {
-        core: { allowedDependencies: [] },
-        features: { allowedDependencies: ['core'] },
+const result = await validateLayers({
+    workspaceRoot: '/path/to/monorepo',
+    config: {
+        layers: {
+            features: { allowedDependencies: ['core'] },
+            core: { allowedDependencies: [] },
+        },
+        enforcement: { mode: 'error' },
+        workspaces: { patterns: ['packages/*'] },
     },
 });
-
-if (result.success) {
-    console.log('Valid config:', result.value);
-} else {
-    console.error('Invalid:', result.error);
-}
 ```
 
-### `formatResults(result, format, mode)`
+### Error handling
 
-Format an `EnforceLayersResult` as a string for display.
+Infrastructure failures (missing config, bad JSON, discovery errors) throw a `StratifyError`:
 
 ```typescript
-import { formatResults } from 'stratifyjs';
+import { validateLayers, StratifyError } from 'stratifyjs';
 
-const consoleOutput = formatResults(result.value, 'console', 'warn');
-const jsonOutput = formatResults(result.value, 'json', 'error');
+try {
+    const result = await validateLayers();
+} catch (error) {
+    if (error instanceof StratifyError) {
+        // error.type: 'config-not-found' | 'config-parse-error' | 'glob-failed' | ...
+        console.error(error.message);
+    }
+}
 ```
 
 ## Config File Format

@@ -4,6 +4,7 @@ import { StratifyError } from '../core/errors.js';
 import { validatePackages } from '../core/validation.js';
 import { loadConfigFromFile } from '../adapters/config-file-loader.js';
 import { discoverPackages } from '../adapters/file-system-discovery.js';
+import { loadAllowedPackages } from '../adapters/allowlist-file-loader.js';
 
 /**
  * Options for the validateLayers API.
@@ -87,10 +88,43 @@ export async function validateLayers(
 
     const { packages } = discoveryResult.value;
 
+    // Resolve allowed-packages for layers with membership constraints
+    const allowedPackagesByLayer = await resolveAllowedPackages(config, workspaceRoot);
+
     // Validate packages against config
-    const violations = validatePackages(packages, config);
+    const violations = validatePackages(packages, config, allowedPackagesByLayer);
 
     const duration = performance.now() - startTime;
 
     return { violations, totalPackages: packages.length, duration };
+}
+
+/**
+ * Resolve allowed-packages sets for all layers that define membership constraints.
+ * Returns a Map from layer name to the resolved Set of allowed package names.
+ *
+ * @param config - The stratify configuration object.
+ * @param workspaceRoot - The root directory of the workspace, used to resolve file paths.
+ * @returns A Map where keys are layer names and values are Sets of allowed package names.
+ * @throws {StratifyError} If loading any allowed-packages file fails.
+ */
+async function resolveAllowedPackages(
+    config: StratifyConfig,
+    workspaceRoot: string
+): Promise<Map<string, Set<string>>> {
+    const map = new Map<string, Set<string>>();
+
+    for (const [layerName, layerDef] of Object.entries(config.layers)) {
+        if (layerDef.allowedPackages) {
+            map.set(layerName, new Set(layerDef.allowedPackages));
+        } else if (layerDef.allowedPackagesFile) {
+            const result = await loadAllowedPackages(workspaceRoot, layerDef.allowedPackagesFile);
+            if (!result.success) {
+                throw new StratifyError(result.error);
+            }
+            map.set(layerName, result.value);
+        }
+    }
+
+    return map;
 }

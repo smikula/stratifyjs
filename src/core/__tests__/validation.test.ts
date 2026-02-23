@@ -150,4 +150,76 @@ describe('validatePackages', () => {
 
         expect(violations).toHaveLength(0);
     });
+
+    // ── Unauthorized layer member ──────────────────────────────────────
+    it('returns no violations for layers without membership restrictions', () => {
+        const packages: Package[] = [
+            createTestPackage({ name: '@app/core', layer: 'core', dependencies: [] }),
+        ];
+
+        const violations = validatePackages(packages, config, new Map());
+
+        const membershipViolations = violations.filter(v => v.type === 'unauthorized-layer-member');
+        expect(membershipViolations).toHaveLength(0);
+    });
+
+    it('returns an unauthorized-layer-member violation for unlisted packages', () => {
+        const restrictedConfig = createTestConfig({
+            layers: {
+                legacy: { allowedDependencies: ['*'] },
+            },
+        });
+        const packages: Package[] = [
+            createTestPackage({ name: '@app/new-thing', layer: 'legacy', dependencies: [] }),
+        ];
+        const allowedMap = new Map([['legacy', new Set(['@app/old-thing'])]]);
+
+        const violations = validatePackages(packages, restrictedConfig, allowedMap);
+
+        expect(violations).toHaveLength(1);
+        expect(violations[0].type).toBe('unauthorized-layer-member');
+        expect(violations[0].package).toBe('@app/new-thing');
+        expect(violations[0].detailedMessage).toContain('Unauthorized Layer Member');
+        expect(violations[0].details).toEqual(expect.objectContaining({ fromLayer: 'legacy' }));
+    });
+
+    it('allows packages that are in the membership allowlist', () => {
+        const restrictedConfig = createTestConfig({
+            layers: {
+                legacy: { allowedDependencies: ['*'] },
+            },
+        });
+        const packages: Package[] = [
+            createTestPackage({ name: '@app/old-thing', layer: 'legacy', dependencies: [] }),
+        ];
+        const allowedMap = new Map([['legacy', new Set(['@app/old-thing'])]]);
+
+        const violations = validatePackages(packages, restrictedConfig, allowedMap);
+
+        expect(violations).toHaveLength(0);
+    });
+
+    it('skips dependency checks for unauthorized layer members', () => {
+        const restrictedConfig = createTestConfig({
+            layers: {
+                legacy: { allowedDependencies: [] },
+                core: { allowedDependencies: [] },
+            },
+        });
+        const packages: Package[] = [
+            createTestPackage({
+                name: '@app/unauthorized',
+                layer: 'legacy',
+                dependencies: ['@app/core'],
+            }),
+            createTestPackage({ name: '@app/core', layer: 'core', dependencies: [] }),
+        ];
+        const allowedMap = new Map([['legacy', new Set<string>()]]);
+
+        const violations = validatePackages(packages, restrictedConfig, allowedMap);
+
+        // Should get unauthorized-layer-member only, NOT invalid-dependency
+        expect(violations).toHaveLength(1);
+        expect(violations[0].type).toBe('unauthorized-layer-member');
+    });
 });

@@ -1,4 +1,9 @@
-import { hasRequiredLayer, isKnownLayer, isDependencyAllowed } from '../rules.js';
+import {
+    hasRequiredLayer,
+    isKnownLayer,
+    isDependencyAllowed,
+    isPackageAllowedInLayer,
+} from '../rules.js';
 import type { Package, LayerMap } from '../../types/types.js';
 
 describe('hasRequiredLayer', () => {
@@ -45,5 +50,26 @@ describe('isDependencyAllowed', () => {
     it('returns true when allowedDependencies contains wildcard "*"', () => {
         // The wildcard means "this layer can depend on any other layer"
         expect(isDependencyAllowed('ui', 'anything', ['*'])).toBe(true);
+    });
+});
+
+describe('isPackageAllowedInLayer', () => {
+    it('should return true when no allowlist is defined (unrestricted layer)', () => {
+        expect(isPackageAllowedInLayer('@app/anything', undefined)).toBe(true);
+    });
+
+    it('should return true when the package is in the allowed set', () => {
+        const allowed = new Set(['@app/auth', '@app/cart']);
+        expect(isPackageAllowedInLayer('@app/auth', allowed)).toBe(true);
+    });
+
+    it('should return false when the package is NOT in the allowed set', () => {
+        const allowed = new Set(['@app/auth', '@app/cart']);
+        expect(isPackageAllowedInLayer('@app/new-thing', allowed)).toBe(false);
+    });
+
+    it('should return false for an empty allowed set', () => {
+        const allowed = new Set<string>();
+        expect(isPackageAllowedInLayer('@app/any', allowed)).toBe(false);
     });
 });

@@ -1,0 +1,28 @@
+{
+    "layers": {
+        "entry": {
+            "description": "Top-level app",
+            "allowedDependencies": ["core"],
+            "allowedPackages": ["@sample/app-ui"]
+        },
+        "core": {
+            "description": "Core logic",
+            "allowedDependencies": ["infra"]
+        },
+        "infra": {
+            "description": "Infrastructure",
+            "allowedDependencies": []
+        },
+        "legacy": {
+            "description": "Legacy packages",
+            "allowedDependencies": ["*"],
+            "allowedPackagesFile": "sample-allowed-packages.json"
+        }
+    },
+    "enforcement": {
+        "mode": "error"
+    },
+    "workspaces": {
+        "patterns": ["packages/*"]
+    }
+}

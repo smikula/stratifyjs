@@ -11,6 +11,9 @@ import { ok, err } from './result.js';
 
 /**
  * Validate that a raw parsed object conforms to the LayerConfig schema.
+ *
+ * @param raw - The raw parsed JSON object to validate
+ * @returns A Result containing the validated LayerConfig, or a ConfigError with details of all validation issues
  */
 export function validateConfigSchema(raw: unknown): Result<LayerConfig, ConfigError> {
     if (typeof raw !== 'object' || raw === null) {
@@ -98,6 +101,10 @@ export function validateConfigSchema(raw: unknown): Result<LayerConfig, ConfigEr
 
 /**
  * Validate a single layer definition.
+ *
+ * @param name - The name of the layer (for error messages)
+ * @param raw - The raw layer definition object to validate
+ * @returns A Result containing the validated LayerDefinition, or a ConfigError
  */
 export function validateLayerDefinition(
     name: string,
@@ -126,8 +133,42 @@ export function validateLayerDefinition(
         });
     }
 
+    // Validate allowedPackages (optional inline list)
+    if (def.allowedPackages !== undefined) {
+        if (
+            !Array.isArray(def.allowedPackages) ||
+            def.allowedPackages.length === 0 ||
+            !def.allowedPackages.every((p: unknown) => typeof p === 'string')
+        ) {
+            return err({
+                type: 'config-validation-error',
+                message: `Layer "${name}" allowedPackages must be a non-empty array of strings`,
+            });
+        }
+    }
+
+    // Validate allowedPackagesFile (optional external file path)
+    if (def.allowedPackagesFile !== undefined) {
+        if (typeof def.allowedPackagesFile !== 'string' || def.allowedPackagesFile.trim() === '') {
+            return err({
+                type: 'config-validation-error',
+                message: `Layer "${name}" allowedPackagesFile must be a non-empty string`,
+            });
+        }
+    }
+
+    // Mutual exclusion: cannot have both
+    if (def.allowedPackages !== undefined && def.allowedPackagesFile !== undefined) {
+        return err({
+            type: 'config-validation-error',
+            message: `Layer "${name}" has both "allowedPackages" and "allowedPackagesFile" — use one or the other`,
+        });
+    }
+
     return ok({
         description: typeof def.description === 'string' ? def.description : undefined,
         allowedDependencies: def.allowedDependencies as string[],
+        allowedPackages: def.allowedPackages as string[] | undefined,
+        allowedPackagesFile: def.allowedPackagesFile as string | undefined,
     });
 }

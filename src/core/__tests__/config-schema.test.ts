@@ -166,3 +166,108 @@ describe('validateLayerDefinition', () => {
         expect(result.success).toBe(false);
     });
 });
+
+describe('allowedPackages and allowedPackagesFile validation', () => {
+    it('should accept a layer with allowedPackages as a non-empty string array', () => {
+        const config = {
+            layers: {
+                entry: {
+                    allowedDependencies: [],
+                    allowedPackages: ['@app/main', '@app/admin'],
+                },
+            },
+        };
+        const result = validateConfigSchema(config);
+        expect(result.success).toBe(true);
+    });
+
+    it('should accept a layer with allowedPackagesFile as a non-empty string', () => {
+        const config = {
+            layers: {
+                legacy: {
+                    allowedDependencies: ['*'],
+                    allowedPackagesFile: 'legacy-packages.json',
+                },
+            },
+        };
+        const result = validateConfigSchema(config);
+        expect(result.success).toBe(true);
+    });
+
+    it('should accept a layer with neither allowedPackages nor allowedPackagesFile', () => {
+        const config = {
+            layers: {
+                core: { allowedDependencies: [] },
+            },
+        };
+        const result = validateConfigSchema(config);
+        expect(result.success).toBe(true);
+    });
+
+    it('should reject a layer with both allowedPackages and allowedPackagesFile', () => {
+        const config = {
+            layers: {
+                legacy: {
+                    allowedDependencies: [],
+                    allowedPackages: ['@app/old'],
+                    allowedPackagesFile: 'legacy-packages.json',
+                },
+            },
+        };
+        const result = validateConfigSchema(config);
+        expect(result.success).toBe(false);
+        if (!result.success) {
+            expect(result.error.message).toContain('Invalid layer definitions');
+        }
+    });
+
+    it('should reject allowedPackages that is not an array', () => {
+        const config = {
+            layers: {
+                entry: { allowedDependencies: [], allowedPackages: 'not-an-array' },
+            },
+        };
+        const result = validateConfigSchema(config);
+        expect(result.success).toBe(false);
+    });
+
+    it('should reject allowedPackages that is an empty array', () => {
+        const config = {
+            layers: {
+                entry: { allowedDependencies: [], allowedPackages: [] },
+            },
+        };
+        const result = validateConfigSchema(config);
+        expect(result.success).toBe(false);
+    });
+
+    it('should reject allowedPackages with non-string elements', () => {
+        const config = {
+            layers: {
+                entry: { allowedDependencies: [], allowedPackages: [123, true] },
+            },
+        };
+        const result = validateConfigSchema(config);
+        expect(result.success).toBe(false);
+    });
+
+    it('should reject allowedPackagesFile that is not a string', () => {
+        const config = {
+            layers: {
+                legacy: { allowedDependencies: [], allowedPackagesFile: 123 },
+            },
+        };
+        const result = validateConfigSchema(config);
+        expect(result.success).toBe(false);
+    });
+
+    it('should reject allowedPackagesFile that is an empty string', () => {
+        const config = {
+            layers: {
+                legacy: { allowedDependencies: [], allowedPackagesFile: '' },
+            },
+        };
+        const result = validateConfigSchema(config);
+        expect(result.success).toBe(false);
+    });
+});

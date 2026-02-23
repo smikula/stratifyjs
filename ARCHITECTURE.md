@@ -87,7 +87,7 @@ This document describes the internal architecture of `stratify`.
 | `errors.ts`          | `LayerError`, `ConfigError`, `DiscoveryError` type definitions, `formatLayerError()`, and `StratifyError` class. |
 | `config-schema.ts`   | Runtime validation of raw config objects (`validateConfigSchema()`).                               |
 | `config-defaults.ts` | Default values and `applyDefaults()` for enforcement mode and workspace patterns.                  |
-| `rules.ts`           | Individual rule predicates: `hasRequiredLayer()`, `isKnownLayer()`, `isDependencyAllowed()`.       |
+| `rules.ts`           | Individual rule predicates: `hasRequiredLayer()`, `isKnownLayer()`, `isDependencyAllowed()`, `isPackageAllowedInLayer()`. |
 | `validation.ts`      | Orchestrates all rules across packages (`validatePackages()`). Populates `detailedMessage` on violations. |
 | `package-parser.ts`  | Parses `package.json` into typed `Package` objects, extracts `workspace:` dependencies.            |
 
@@ -97,6 +97,7 @@ This document describes the internal architecture of `stratify`.
 | -------------------------- | ------------------------------------------------------------------------------------------------------------ |
 | `config-file-loader.ts`    | Reads `stratify.config.json` from disk, parses JSON, validates via core, applies defaults.                      |
 | `file-system-discovery.ts` | Globs for `package.json` files, reads and parses them. Uses `Promise.allSettled` for resilient parallel I/O. |
+| `allowlist-file-loader.ts` | Reads `allowedPackagesFile` JSON files from disk. Validates content is a non-empty string array, returns a `Set<string>`. |
 
 ### Types — `src/types/`
 
@@ -123,11 +124,16 @@ Library API: validateLayers(options)        ← throws StratifyError on failure
        │         ├──► fs: read each file
        │         └──► Core: parsePackageJson()
        │
-       └──► Core: validatePackages(packages, config)
+       ├──► Adapter: loadAllowedPackages()   (for each layer with allowedPackagesFile)
+       │         │
+       │         └──► fs: read JSON allowlist file → validate → Set<string>
+       │
+       └──► Core: validatePackages(packages, config, allowedPackagesByLayer)
                 │
-                ├──► hasRequiredLayer()    → missing-layer   (+ detailedMessage)
-                ├──► isKnownLayer()        → unknown-layer   (+ detailedMessage)
-                └──► isDependencyAllowed() → invalid-dependency (+ detailedMessage)
+                ├──► hasRequiredLayer()        → missing-layer              (+ detailedMessage)
+                ├──► isKnownLayer()            → unknown-layer              (+ detailedMessage)
+                ├──► isPackageAllowedInLayer() → unauthorized-layer-member  (+ detailedMessage)
+                └──► isDependencyAllowed()     → invalid-dependency         (+ detailedMessage)
                          │
                          ▼
                 ValidateLayersResult { violations, totalPackages, duration }

@@ -223,6 +223,8 @@ A map of layer names to their definitions. Each layer must specify which other l
 | --------------------- | ---------- | -------- | -------------------------------------------------------------------- |
 | `description`         | `string`   | No       | Human-readable description of the layer's purpose                    |
 | `allowedDependencies` | `string[]` | **Yes**  | Layer names this layer may depend on. Use `"*"` to allow all layers. |
+| `allowedPackages`     | `string[]` | No       | Inline list of package names allowed to declare this layer. Mutually exclusive with `allowedPackagesFile`. |
+| `allowedPackagesFile` | `string`   | No       | Path to a JSON file (relative to workspace root) containing an array of allowed package names. Mutually exclusive with `allowedPackages`. |
 
 ### `enforcement` (optional)
 
@@ -291,6 +293,51 @@ External (npm registry) dependencies are ignored — layers only govern internal
 | `missing-layer`      | Package has no `"layer"` field in its `package.json`                           |
 | `unknown-layer`      | Package declares a layer not defined in the config                             |
 | `invalid-dependency` | Package depends on another package whose layer is not in `allowedDependencies` |
+| `unauthorized-layer-member` | Package declares a layer that has an allowlist, but the package is not in it |
+
+### Layer Membership Control
+
+You can restrict which packages are allowed to belong to a specific layer. This is useful for preventing growth of tech-debt layers, limiting entry points to approved app shells, or requiring approval before packages join privileged layers.
+
+**Inline allowlist** — for layers with a small, stable set of members:
+
+```json
+{
+    "layers": {
+        "entry": {
+            "description": "App bootstraps — only approved entry points",
+            "allowedDependencies": ["features", "core", "shared"],
+            "allowedPackages": ["@myapp/web-main", "@myapp/web-admin"]
+        }
+    }
+}
+```
+
+**External JSON file** — for layers with many members (keeps the config readable):
+
+```json
+{
+    "layers": {
+        "legacy": {
+            "description": "Existing packages not yet migrated",
+            "allowedDependencies": ["*"],
+            "allowedPackagesFile": "legacy-packages.json"
+        }
+    }
+}
+```
+
+Where `legacy-packages.json` is a sorted JSON array checked into source control:
+
+```json
+[
+    "@myapp/old-auth",
+    "@myapp/old-cart",
+    "@myapp/old-checkout"
+]
+```
+
+The two fields are mutually exclusive — specifying both on the same layer is a config validation error. Layers without either field remain unrestricted.
 
 ### Wildcard Dependencies
 

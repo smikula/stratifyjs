@@ -31,7 +31,7 @@ export function validatePackages(
                 message: `Package "${pkg.name}" is missing the required "layer" field in package.json`,
                 detailedMessage:
                     `🏷️  Missing Layer: "${pkg.name}"\n` +
-                    `   Add a "layer" field to ${pkg.path}/package.json to assign this package to an architectural layer.\n` +
+                    `   Add a "layer" field to ${pkg.path} to assign this package to an architectural layer.\n` +
                     `   Valid layers: ${Object.keys(config.layers).join(', ')}`,
             });
             continue; // Cannot validate further without layer
@@ -49,7 +49,7 @@ export function validatePackages(
                 detailedMessage:
                     `❓ Unknown Layer: "${pkg.name}" declares layer "${layer}", which is not defined in the config.\n` +
                     `   Valid layers: ${validLayers}\n` +
-                    `   Fix the "layer" field in ${pkg.path}/package.json.`,
+                    `   Fix the "layer" field in ${pkg.path}.`,
             });
             continue;
         }
@@ -65,7 +65,7 @@ export function validatePackages(
                 message: `Package "${pkg.name}" is not permitted in layer "${layer}"`,
                 detailedMessage:
                     `🔒 Unauthorized Layer Member: "${pkg.name}" declares layer "${layer}", but is not in the allowed list.\n` +
-                    `   Add "${pkg.name}" to ${source}, or assign a different layer in ${pkg.path}/package.json.`,
+                    `   Add "${pkg.name}" to ${source}, or assign a different layer in ${pkg.path}.`,
                 details: {
                     fromLayer: layer,
                     allowedPackagesSource: layerDef.allowedPackagesFile ?? 'inline',

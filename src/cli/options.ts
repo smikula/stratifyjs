@@ -34,9 +34,7 @@ export function toLibraryOptions(
 ): ValidateLayersOptions {
     return {
         workspaceRoot: cli.root,
-        ...(resolvedConfig
-            ? { config: resolvedConfig }
-            : { configPath: cli.config }),
+        ...(resolvedConfig ? { config: resolvedConfig } : { configPath: cli.config }),
         mode: cli.mode,
     };
 }

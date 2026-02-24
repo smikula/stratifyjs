@@ -28,7 +28,7 @@ export async function handleValidateCommand(options: CliOptions): Promise<number
 
         // CLI --mode flag overrides the config file's mode
         const effectiveMode = options.mode ?? config.enforcement.mode;
-        
+
         // Pass the pre-built config to the API — it won't re-read the file
         const result = await validateLayers(toLibraryOptions(options, config));
 

@@ -1,4 +1,5 @@
 import { resolve } from 'path';
+import { loadConfigFromFile } from '../adapters/config-file-loader.js';
 import { validateLayers } from '../api/api.js';
 import { StratifyError } from '../core/errors.js';
 import type { CliOptions } from './options.js';
@@ -18,9 +19,18 @@ export async function handleValidateCommand(options: CliOptions): Promise<number
     logGray(`Config: ${configPath}\n`);
 
     try {
-        const result = await validateLayers(toLibraryOptions(options));
+        // Load config in the CLI so we can read the resolved enforcement mode
+        const configResult = await loadConfigFromFile(workspaceRoot, options.config);
+        if (!configResult.success) {
+            throw new StratifyError(configResult.error);
+        }
+        const config = configResult.value;
 
-        const effectiveMode = options.mode ?? 'warn';
+        // CLI --mode flag overrides the config file's mode
+        const effectiveMode = options.mode ?? config.enforcement.mode;
+        
+        // Pass the pre-built config to the API — it won't re-read the file
+        const result = await validateLayers(toLibraryOptions(options, config));
 
         logSuccess(`✅ Discovered ${result.totalPackages} packages\n`);
 

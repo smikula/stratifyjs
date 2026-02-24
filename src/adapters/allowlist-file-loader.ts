@@ -21,20 +21,18 @@ export async function loadAllowedPackages(
 ): Promise<Result<Set<string>, ConfigError>> {
     const fullPath = resolve(workspaceRoot, filePath);
 
-    try {
-        await access(fullPath);
-    } catch {
-        return err({
-            type: 'config-not-found',
-            message: `Allowed-packages file not found: ${fullPath}`,
-            path: fullPath,
-        });
-    }
-
     let content: string;
     try {
         content = await readFile(fullPath, 'utf-8');
     } catch (error) {
+        const code = (error as NodeJS.ErrnoException).code;
+        if (code === 'ENOENT') {
+            return err({
+                type: 'config-not-found',
+                message: `Allowed-packages file not found: ${fullPath}`,
+                path: fullPath,
+            });
+        }
         return err({
             type: 'config-read-error',
             message: error instanceof Error ? error.message : String(error),

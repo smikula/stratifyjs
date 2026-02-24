@@ -1,4 +1,5 @@
 import type { ValidateLayersOptions } from '../api/api.js';
+import { StratifyConfig } from '../api/index.js';
 
 /**
  * Parsed CLI options.
@@ -24,11 +25,18 @@ export function parseCliOptions(raw: Record<string, unknown>): CliOptions {
 
 /**
  * Convert CLI options to library options.
+ * When a pre-loaded config is provided, it is passed directly to the API
+ * (skipping file loading), while still allowing the CLI --mode flag to override.
  */
-export function toLibraryOptions(cli: CliOptions): ValidateLayersOptions {
+export function toLibraryOptions(
+    cli: CliOptions,
+    resolvedConfig?: StratifyConfig
+): ValidateLayersOptions {
     return {
         workspaceRoot: cli.root,
-        configPath: cli.config,
+        ...(resolvedConfig
+            ? { config: resolvedConfig }
+            : { configPath: cli.config }),
         mode: cli.mode,
     };
 }

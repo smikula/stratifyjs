@@ -21,6 +21,7 @@ export function validatePackages(
 ): Violation[] {
     const violations: Violation[] = [];
     const packageMap = new Map(packages.map(pkg => [pkg.name, pkg]));
+    const validLayers = Object.keys(config.layers).join(', ');
 
     for (const pkg of packages) {
         // Rule 1: Check if package has a layer field
@@ -32,7 +33,7 @@ export function validatePackages(
                 detailedMessage:
                     `🏷️  Missing Layer: "${pkg.name}"\n` +
                     `   Add a "layer" field to ${pkg.path} to assign this package to an architectural layer.\n` +
-                    `   Valid layers: ${Object.keys(config.layers).join(', ')}`,
+                    `   Valid layers: ${validLayers}`,
             });
             continue; // Cannot validate further without layer
         }
@@ -41,7 +42,6 @@ export function validatePackages(
 
         // Rule 2: Layer must be defined in config
         if (!isKnownLayer(layer, config.layers)) {
-            const validLayers = Object.keys(config.layers).join(', ');
             violations.push({
                 type: 'unknown-layer',
                 package: pkg.name,
@@ -76,13 +76,14 @@ export function validatePackages(
 
         // Rule 4: Each dependency must target an allowed layer
         const layerDef = config.layers[layer];
+        const allowedDeps = new Set(layerDef.allowedDependencies);
         for (const depName of pkg.dependencies) {
             const depPkg = packageMap.get(depName);
             if (!depPkg || !depPkg.layer) {
                 continue; // Skip dependencies that are not discovered or have no layer
             }
 
-            if (!isDependencyAllowed(layer, depPkg.layer, layerDef.allowedDependencies)) {
+            if (!isDependencyAllowed(layer, depPkg.layer, allowedDeps)) {
                 const allowed =
                     layerDef.allowedDependencies.length > 0
                         ? layerDef.allowedDependencies.join(', ')

@@ -13,11 +13,6 @@
       "source": "./src/api/index.ts",
       "types": "./lib/api/index.d.ts",
       "default": "./lib/api/index.js"
-    },
-    "./cli": {
-      "source": "./src/cli/index.ts",
-      "types": "./lib/cli/index.d.ts",
-      "default": "./lib/cli/index.js"
     }
   },
   "scripts": {

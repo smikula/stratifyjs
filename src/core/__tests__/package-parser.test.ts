@@ -16,7 +16,7 @@ describe('parsePackageJson', () => {
             },
         };
 
-        const result = parsePackageJson(content, 'packages/ui');
+        const result = parsePackageJson(content, 'packages/ui', DEFAULT_PROTOCOLS);
 
         expect(result.success).toBe(true);
         if (result.success) {
@@ -33,7 +33,7 @@ describe('parsePackageJson', () => {
     it('parses a package without a layer (layer is optional)', () => {
         const content = { name: '@my/utils', version: '1.0.0' };
 
-        const result = parsePackageJson(content, 'packages/utils');
+        const result = parsePackageJson(content, 'packages/utils', DEFAULT_PROTOCOLS);
 
         expect(result.success).toBe(true);
         if (result.success) {
@@ -42,7 +42,7 @@ describe('parsePackageJson', () => {
     });
 
     it('returns error for non-object content', () => {
-        const result = parsePackageJson('string', 'packages/bad');
+        const result = parsePackageJson('string', 'packages/bad', DEFAULT_PROTOCOLS);
 
         expect(result.success).toBe(false);
         if (!result.success) {
@@ -52,12 +52,16 @@ describe('parsePackageJson', () => {
     });
 
     it('returns error for null content', () => {
-        const result = parsePackageJson(null, 'packages/bad');
+        const result = parsePackageJson(null, 'packages/bad', DEFAULT_PROTOCOLS);
         expect(result.success).toBe(false);
     });
 
     it('returns error when name is missing', () => {
-        const result = parsePackageJson({ version: '1.0.0' }, 'packages/no-name');
+        const result = parsePackageJson(
+            { version: '1.0.0' },
+            'packages/no-name',
+            DEFAULT_PROTOCOLS
+        );
 
         expect(result.success).toBe(false);
         if (!result.success) {
@@ -67,7 +71,7 @@ describe('parsePackageJson', () => {
     });
 
     it('returns error when name is empty string', () => {
-        const result = parsePackageJson({ name: '' }, 'packages/empty-name');
+        const result = parsePackageJson({ name: '' }, 'packages/empty-name', DEFAULT_PROTOCOLS);
 
         expect(result.success).toBe(false);
         if (!result.success) {
@@ -86,24 +90,6 @@ describe('parsePackageJson', () => {
         };
 
         const result = parsePackageJson(content, 'packages/app', ['link:']);
-
-        expect(result.success).toBe(true);
-        if (result.success) {
-            expect(result.value.dependencies).toEqual(['@my/core']);
-        }
-    });
-
-    it('defaults to workspace: when protocols not provided', () => {
-        const content = {
-            name: '@my/app',
-            layer: 'app',
-            dependencies: {
-                '@my/core': 'workspace:*',
-                '@my/linked': 'link:../linked',
-            },
-        };
-
-        const result = parsePackageJson(content, 'packages/app');
 
         expect(result.success).toBe(true);
         if (result.success) {

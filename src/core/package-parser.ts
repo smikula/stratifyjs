@@ -2,7 +2,6 @@ import type { Package } from '../types/types.js';
 import type { DiscoveryError } from './errors.js';
 import type { Result } from './result.js';
 import { ok, err } from './result.js';
-import { DEFAULT_PROTOCOLS } from './constants.js';
 
 /**
  * Parse a raw package.json object into a Package.
@@ -14,7 +13,7 @@ import { DEFAULT_PROTOCOLS } from './constants.js';
 export function parsePackageJson(
     content: unknown,
     relativePath: string,
-    protocols: string[] = DEFAULT_PROTOCOLS
+    protocols: string[]
 ): Result<Package, DiscoveryError> {
     if (typeof content !== 'object' || content === null) {
         return err({
@@ -58,7 +57,7 @@ export function parsePackageJson(
  * @param peerDependencies - The peerDependencies field from package.json
  */
 export function extractInternalDependencies(
-    protocols: string[] = DEFAULT_PROTOCOLS,
+    protocols: string[],
     dependencies?: Record<string, string>,
     devDependencies?: Record<string, string>,
     peerDependencies?: Record<string, string>

@@ -47,7 +47,11 @@ describe('validateLayers', () => {
                     infra: { allowedDependencies: [] },
                 },
                 enforcement: { mode: 'warn' },
-                workspaces: { patterns: ['packages/*'], protocols: ['workspace:'] },
+                workspaces: {
+                    patterns: ['packages/*'],
+                    protocols: ['workspace:'],
+                    ignore: ['**/node_modules/**', '**/lib/**', '**/dist/**'],
+                },
             },
         });
 
@@ -66,7 +70,11 @@ describe('validateLayers', () => {
                     infra: { allowedDependencies: [] },
                 },
                 enforcement: { mode: 'error' },
-                workspaces: { patterns: ['packages/*'], protocols: ['workspace:'] },
+                workspaces: {
+                    patterns: ['packages/*'],
+                    protocols: ['workspace:'],
+                    ignore: ['**/node_modules/**', '**/lib/**', '**/dist/**'],
+                },
             },
         });
 
@@ -102,7 +110,11 @@ describe('validateLayers', () => {
                     infra: { allowedDependencies: [] },
                 },
                 enforcement: { mode: 'warn' },
-                workspaces: { patterns: ['packages/*'], protocols: ['workspace:'] },
+                workspaces: {
+                    patterns: ['packages/*'],
+                    protocols: ['workspace:'],
+                    ignore: ['**/node_modules/**', '**/lib/**', '**/dist/**'],
+                },
             },
         });
 
@@ -119,7 +131,11 @@ describe('validateLayers', () => {
                     infra: { allowedDependencies: [] },
                 },
                 enforcement: { mode: 'off' },
-                workspaces: { patterns: ['packages/*'], protocols: ['workspace:'] },
+                workspaces: {
+                    patterns: ['packages/*'],
+                    protocols: ['workspace:'],
+                    ignore: ['**/node_modules/**', '**/lib/**', '**/dist/**'],
+                },
             },
         });
 
@@ -151,7 +167,11 @@ describe('validateLayers', () => {
                     infra: { allowedDependencies: [] },
                 },
                 enforcement: { mode: 'error' },
-                workspaces: { patterns: ['packages/*'], protocols: ['workspace:'] },
+                workspaces: {
+                    patterns: ['packages/*'],
+                    protocols: ['workspace:'],
+                    ignore: ['**/node_modules/**', '**/lib/**', '**/dist/**'],
+                },
             },
             mode: 'warn',
         });

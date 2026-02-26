@@ -54,6 +54,10 @@ export interface LayerConfig {
  * Workspace discovery configuration
  */
 export interface WorkspaceConfig {
+    /**
+     * Glob patterns to discover packages in the monorepo. Each pattern is relative
+     * to the workspace root and should point to directories containing package.json files.
+     */
     patterns: string[];
     /**
      * Version-string prefixes that identify internal (monorepo) dependencies.
@@ -64,6 +68,13 @@ export interface WorkspaceConfig {
      * @default ["workspace:"]
      */
     protocols: string[];
+    /**
+     * Glob patterns to exclude from package discovery.
+     * Paths matching any of these patterns are skipped during globbing.
+     *
+     * @default ["**​/node_modules/**", "**​/lib/**", "**​/dist/**"]
+     */
+    ignore: string[];
 }
 
 /**

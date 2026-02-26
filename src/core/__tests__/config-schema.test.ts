@@ -176,6 +176,48 @@ describe('validateConfigSchema', () => {
             expect(result.error.message).toContain('array of strings');
         }
     });
+
+    it('returns ok for valid workspaces.ignore', () => {
+        const config = {
+            layers: { core: { allowedDependencies: [] } },
+            workspaces: { ignore: ['**/node_modules/**', '**/build/**'] },
+        };
+        const result = validateConfigSchema(config);
+        expect(result.success).toBe(true);
+    });
+
+    it('returns ok for config without ignore (uses default)', () => {
+        const config = {
+            layers: { core: { allowedDependencies: [] } },
+            workspaces: { patterns: ['packages/*'] },
+        };
+        const result = validateConfigSchema(config);
+        expect(result.success).toBe(true);
+    });
+
+    it('returns error for invalid workspaces.ignore (non-array)', () => {
+        const config = {
+            layers: { core: { allowedDependencies: [] } },
+            workspaces: { ignore: '**/node_modules/**' },
+        };
+        const result = validateConfigSchema(config);
+        expect(result.success).toBe(false);
+        if (!result.success) {
+            expect(result.error.message).toContain('array of strings');
+        }
+    });
+
+    it('returns error for workspaces.ignore with non-string elements', () => {
+        const config = {
+            layers: { core: { allowedDependencies: [] } },
+            workspaces: { ignore: [123, true] },
+        };
+        const result = validateConfigSchema(config);
+        expect(result.success).toBe(false);
+        if (!result.success) {
+            expect(result.error.message).toContain('array of strings');
+        }
+    });
 });
 
 describe('validateLayerDefinition', () => {

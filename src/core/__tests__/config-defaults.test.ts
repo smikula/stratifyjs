@@ -1,5 +1,6 @@
 import { applyDefaults, DEFAULT_ENFORCEMENT, DEFAULT_WORKSPACES } from '../config-defaults.js';
 import type { LayerConfig } from '../../types/types.js';
+import { DEFAULT_PROTOCOLS, DEFAULT_IGNORE } from '../constants.js';
 
 describe('applyDefaults', () => {
     // ── Minimal config (all defaults applied) ──────────────────────────
@@ -21,7 +22,8 @@ describe('applyDefaults', () => {
         // Workspaces defaults to ['packages/**/*']
         expect(resolved.workspaces).toEqual(DEFAULT_WORKSPACES);
         expect(resolved.workspaces.patterns).toEqual(['packages/**/*']);
-        expect(resolved.workspaces.protocols).toEqual(['workspace:']);
+        expect(resolved.workspaces.protocols).toEqual(DEFAULT_PROTOCOLS);
+        expect(resolved.workspaces.ignore).toEqual(DEFAULT_IGNORE);
     });
 
     // ── Override enforcement only ──────────────────────────────────────
@@ -36,7 +38,8 @@ describe('applyDefaults', () => {
         expect(resolved.enforcement.mode).toBe('error');
         // workspaces should still get defaults
         expect(resolved.workspaces.patterns).toEqual(['packages/**/*']);
-        expect(resolved.workspaces.protocols).toEqual(['workspace:']);
+        expect(resolved.workspaces.protocols).toEqual(DEFAULT_PROTOCOLS);
+        expect(resolved.workspaces.ignore).toEqual(DEFAULT_IGNORE);
     });
 
     // ── Override workspaces only ───────────────────────────────────────
@@ -49,13 +52,14 @@ describe('applyDefaults', () => {
         const resolved = applyDefaults(config);
 
         expect(resolved.workspaces.patterns).toEqual(['apps/*', 'libs/*']);
-        expect(resolved.workspaces.protocols).toEqual(['workspace:']);
+        expect(resolved.workspaces.protocols).toEqual(DEFAULT_PROTOCOLS);
+        expect(resolved.workspaces.ignore).toEqual(DEFAULT_IGNORE);
         // enforcement should still get defaults
         expect(resolved.enforcement.mode).toBe('warn');
     });
 
     // ── Override both ──────────────────────────────────────────────────
-    it('uses both overrides when provided', () => {
+    it('uses overrides when provided', () => {
         const config: LayerConfig = {
             layers: { core: { allowedDependencies: [] } },
             enforcement: { mode: 'off' },
@@ -67,6 +71,7 @@ describe('applyDefaults', () => {
         expect(resolved.enforcement.mode).toBe('off');
         expect(resolved.workspaces.patterns).toEqual(['modules/*']);
         expect(resolved.workspaces.protocols).toEqual(['workspace:']);
+        expect(resolved.workspaces.ignore).toEqual(DEFAULT_IGNORE);
     });
 
     it('uses provided workspaces protocols', () => {
@@ -78,6 +83,22 @@ describe('applyDefaults', () => {
         const resolved = applyDefaults(config);
 
         expect(resolved.workspaces.protocols).toEqual(['workspace:', 'link:']);
+        expect(resolved.workspaces.patterns).toEqual(['packages/*']);
+        expect(resolved.workspaces.ignore).toEqual(DEFAULT_IGNORE);
+    });
+
+    it('uses provided workspaces ignore', () => {
+        const config: LayerConfig = {
+            layers: { core: { allowedDependencies: [] } },
+            workspaces: {
+                patterns: ['packages/*'],
+                ignore: ['**/node_modules/**', '**/build/**'],
+            },
+        };
+
+        const resolved = applyDefaults(config);
+
+        expect(resolved.workspaces.ignore).toEqual(['**/node_modules/**', '**/build/**']);
         expect(resolved.workspaces.patterns).toEqual(['packages/*']);
     });
 });

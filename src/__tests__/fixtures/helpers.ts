@@ -18,7 +18,11 @@ export function createTestConfig(overrides?: Partial<StratifyConfig>): StratifyC
             infra: { allowedDependencies: [] },
         },
         enforcement: { mode: 'warn' },
-        workspaces: { patterns: ['packages/**/*'], protocols: ['workspace:'] },
+        workspaces: {
+            patterns: ['packages/**/*'],
+            protocols: ['workspace:'],
+            ignore: ['**/node_modules/**', '**/lib/**', '**/dist/**'],
+        },
         ...overrides,
     };
 }

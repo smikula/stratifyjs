@@ -11,6 +11,7 @@ describe('discoverPackages', () => {
         const result = await discoverPackages(MONOREPO_DIR, {
             patterns: ['packages/*'],
             protocols: ['workspace:'],
+            ignore: ['**/node_modules/**', '**/lib/**', '**/dist/**'],
         });
 
         expect(result.success).toBe(true);
@@ -36,6 +37,7 @@ describe('discoverPackages', () => {
         const result = await discoverPackages(MONOREPO_DIR, {
             patterns: ['packages/*'],
             protocols: ['workspace:'],
+            ignore: ['**/node_modules/**', '**/lib/**', '**/dist/**'],
         });
 
         expect(result.success).toBe(true);
@@ -54,6 +56,7 @@ describe('discoverPackages', () => {
         const result = await discoverPackages(MONOREPO_DIR, {
             patterns: ['packages/*'],
             protocols: ['workspace:'],
+            ignore: ['**/node_modules/**', '**/lib/**', '**/dist/**'],
         });
 
         expect(result.success).toBe(true);
@@ -76,6 +79,7 @@ describe('discoverPackages', () => {
         const result = await discoverPackages(MONOREPO_DIR, {
             patterns: ['nonexistent/*'],
             protocols: ['workspace:'],
+            ignore: ['**/node_modules/**', '**/lib/**', '**/dist/**'],
         });
 
         expect(result.success).toBe(true);

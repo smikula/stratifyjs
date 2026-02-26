@@ -7,8 +7,6 @@ import type { Result } from '../core/result.js';
 import { ok, err } from '../core/result.js';
 import { parsePackageJson } from '../core/package-parser.js';
 
-const DEFAULT_IGNORE = ['**/node_modules/**', '**/lib/**', '**/dist/**'];
-
 type GlobResult = { ok: true; paths: string[] } | { ok: false; pattern: string; error: unknown };
 
 /**
@@ -33,15 +31,14 @@ export interface DiscoveryResult {
  */
 export async function discoverPackages(
     root: string,
-    config: WorkspaceConfig,
-    ignore: string[] = DEFAULT_IGNORE
+    config: WorkspaceConfig
 ): Promise<Result<DiscoveryResult, DiscoveryError>> {
     const globResults = await Promise.all(
         config.patterns.map(async (pattern): Promise<GlobResult> => {
             try {
                 const paths = await glob(`${pattern}/package.json`, {
                     cwd: root,
-                    ignore,
+                    ignore: config.ignore,
                 });
                 return { ok: true, paths };
             } catch (error) {

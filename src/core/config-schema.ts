@@ -100,6 +100,16 @@ export function validateConfigSchema(raw: unknown): Result<LayerConfig, ConfigEr
                 message: '"workspaces.protocols" must be an array of strings',
             });
         }
+        if (
+            workspaces.ignore !== undefined &&
+            (!Array.isArray(workspaces.ignore) ||
+                !workspaces.ignore.every((p: unknown) => typeof p === 'string'))
+        ) {
+            return err({
+                type: 'config-validation-error',
+                message: '"workspaces.ignore" must be an array of strings',
+            });
+        }
     }
 
     return ok({

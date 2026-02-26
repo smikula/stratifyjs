@@ -1,4 +1,4 @@
-import { readFile, access } from 'fs/promises';
+import { readFile } from 'fs/promises';
 import { resolve } from 'path';
 import type { StratifyConfig } from '../types/types.js';
 import type { ConfigError } from '../core/errors.js';
@@ -17,22 +17,19 @@ export async function loadConfigFromFile(
 ): Promise<Result<StratifyConfig, ConfigError>> {
     const fullPath = resolve(workspaceRoot, configPath);
 
-    // Check file exists
-    try {
-        await access(fullPath);
-    } catch {
-        return err({
-            type: 'config-not-found',
-            message: `Config file not found: ${fullPath}`,
-            path: fullPath,
-        });
-    }
-
-    // Read file
+    // Read file content
     let content: string;
     try {
         content = await readFile(fullPath, 'utf-8');
     } catch (error) {
+        const code = (error as NodeJS.ErrnoException).code;
+        if (code === 'ENOENT') {
+            return err({
+                type: 'config-not-found',
+                message: `Config file not found: ${fullPath}`,
+                path: fullPath,
+            });
+        }
         return err({
             type: 'config-read-error',
             message: error instanceof Error ? error.message : String(error),

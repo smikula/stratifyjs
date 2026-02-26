@@ -40,16 +40,15 @@ describe('isKnownLayer', () => {
 
 describe('isDependencyAllowed', () => {
     it('returns true when target layer is in allowedDependencies', () => {
-        expect(isDependencyAllowed('ui', 'core', ['core', 'shared'])).toBe(true);
+        expect(isDependencyAllowed('ui', 'core', new Set(['core', 'shared']))).toBe(true);
     });
 
     it('returns false when target layer is not in allowedDependencies', () => {
-        expect(isDependencyAllowed('ui', 'infra', ['core'])).toBe(false);
+        expect(isDependencyAllowed('ui', 'infra', new Set(['core']))).toBe(false);
     });
 
     it('returns true when allowedDependencies contains wildcard "*"', () => {
-        // The wildcard means "this layer can depend on any other layer"
-        expect(isDependencyAllowed('ui', 'anything', ['*'])).toBe(true);
+        expect(isDependencyAllowed('ui', 'anything', new Set(['*']))).toBe(true);
     });
 });
 

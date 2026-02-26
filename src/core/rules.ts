@@ -33,9 +33,9 @@ export function isKnownLayer(layerName: string, layers: LayerMap): boolean {
 export function isDependencyAllowed(
     fromLayer: string,
     toLayer: string,
-    allowedDependencies: string[]
+    allowedDependencies: ReadonlySet<string>
 ): boolean {
-    return allowedDependencies.includes('*') || allowedDependencies.includes(toLayer);
+    return allowedDependencies.has('*') || allowedDependencies.has(toLayer);
 }
 
 /**

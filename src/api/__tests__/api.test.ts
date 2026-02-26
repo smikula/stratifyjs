@@ -108,4 +108,56 @@ describe('validateLayers', () => {
 
         expect(result.duration).toBeGreaterThan(0);
     });
+
+    it('short-circuits with zero violations and zero packages when config mode is off', async () => {
+        const result = await validateLayers({
+            workspaceRoot: MONOREPO_DIR,
+            config: {
+                layers: {
+                    ui: { allowedDependencies: ['core'] },
+                    core: { allowedDependencies: ['infra'] },
+                    infra: { allowedDependencies: [] },
+                },
+                enforcement: { mode: 'off' },
+                workspaces: { patterns: ['packages/*'] },
+            },
+        });
+
+        expect(result.violations).toHaveLength(0);
+        expect(result.totalPackages).toBe(0);
+        expect(result.duration).toBeGreaterThanOrEqual(0);
+    });
+
+    it('short-circuits when options.mode overrides to off', async () => {
+        const result = await validateLayers({
+            workspaceRoot: MONOREPO_DIR,
+            configPath: resolve(CONFIGS_DIR, 'valid-config.json'), // config has mode: 'error'
+            mode: 'off',
+        });
+
+        expect(result.violations).toHaveLength(0);
+        expect(result.totalPackages).toBe(0);
+    });
+
+    it('options.mode overrides config enforcement mode', async () => {
+        // Config has mode: 'error' but we override to 'warn' — same violations, just different mode.
+        // This test verifies the override mechanism itself works (the pipeline still runs).
+        const resultWithOverride = await validateLayers({
+            workspaceRoot: MONOREPO_DIR,
+            config: {
+                layers: {
+                    ui: { allowedDependencies: ['core'] },
+                    core: { allowedDependencies: ['infra'] },
+                    infra: { allowedDependencies: [] },
+                },
+                enforcement: { mode: 'error' },
+                workspaces: { patterns: ['packages/*'] },
+            },
+            mode: 'warn',
+        });
+
+        // The pipeline should still run and find violations
+        expect(resultWithOverride.totalPackages).toBe(4);
+        expect(resultWithOverride.violations).toHaveLength(1);
+    });
 });

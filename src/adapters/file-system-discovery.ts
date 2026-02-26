@@ -9,6 +9,8 @@ import { parsePackageJson } from '../core/package-parser.js';
 
 const DEFAULT_IGNORE = ['**/node_modules/**', '**/lib/**', '**/dist/**'];
 
+type GlobResult = { ok: true; paths: string[] } | { ok: false; pattern: string; error: unknown };
+
 /**
  * Non-fatal warning produced during discovery.
  */
@@ -34,23 +36,32 @@ export async function discoverPackages(
     config: WorkspaceConfig,
     ignore: string[] = DEFAULT_IGNORE
 ): Promise<Result<DiscoveryResult, DiscoveryError>> {
-    const allPaths: string[] = [];
+    const globResults = await Promise.all(
+        config.patterns.map(async (pattern): Promise<GlobResult> => {
+            try {
+                const paths = await glob(`${pattern}/package.json`, {
+                    cwd: root,
+                    ignore,
+                });
+                return { ok: true, paths };
+            } catch (error) {
+                return { ok: false, pattern, error };
+            }
+        })
+    );
 
-    for (const pattern of config.patterns) {
-        try {
-            const paths = await glob(`${pattern}/package.json`, {
-                cwd: root,
-                ignore,
-            });
-            allPaths.push(...paths);
-        } catch (error) {
+    const allPaths: string[] = [];
+    for (const result of globResults) {
+        if (!result.ok) {
             return err({
                 type: 'glob-failed',
-                message: error instanceof Error ? error.message : String(error),
-                pattern,
-                cause: error,
+                message:
+                    result.error instanceof Error ? result.error.message : String(result.error),
+                pattern: result.pattern,
+                cause: result.error,
             });
         }
+        allPaths.push(...result.paths);
     }
 
     const uniquePaths = [...new Set(allPaths)];
@@ -69,9 +80,9 @@ export async function discoverPackages(
     for (let i = 0; i < settledPackages.length; i++) {
         const entry = settledPackages[i];
         const relativePath = uniquePaths[i];
-        const fullPath = resolve(root, relativePath);
 
         if (entry.status === 'rejected') {
+            const fullPath = resolve(root, relativePath);
             const reason = entry.reason;
             warnings.push({
                 path: fullPath,
@@ -80,7 +91,7 @@ export async function discoverPackages(
             continue;
         }
 
-        const { parsed } = entry.value;
+        const { parsed, fullPath } = entry.value;
         const result = parsePackageJson(parsed, relativePath);
 
         if (result.success) {

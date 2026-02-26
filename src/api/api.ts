@@ -80,6 +80,12 @@ export async function validateLayers(
         };
     }
 
+    // Short-circuit when enforcement is off — skip all discovery and validation
+    if (config.enforcement.mode === 'off') {
+        const duration = performance.now() - startTime;
+        return { violations: [], totalPackages: 0, duration };
+    }
+
     // Discover packages
     const discoveryResult = await discoverPackages(workspaceRoot, config.workspaces);
     if (!discoveryResult.success) {
@@ -114,16 +120,30 @@ async function resolveAllowedPackages(
 ): Promise<Map<string, Set<string>>> {
     const map = new Map<string, Set<string>>();
 
+    // Separate inline allowedPackages (sync) from file-based ones (async)
+    const fileLoads: { layerName: string; filePath: string }[] = [];
+
     for (const [layerName, layerDef] of Object.entries(config.layers)) {
         if (layerDef.allowedPackages) {
             map.set(layerName, new Set(layerDef.allowedPackages));
         } else if (layerDef.allowedPackagesFile) {
-            const result = await loadAllowedPackages(workspaceRoot, layerDef.allowedPackagesFile);
-            if (!result.success) {
-                throw new StratifyError(result.error);
-            }
-            map.set(layerName, result.value);
+            fileLoads.push({ layerName, filePath: layerDef.allowedPackagesFile });
         }
+    }
+
+    // Load all allowlist files in parallel
+    const results = await Promise.all(
+        fileLoads.map(async ({ layerName, filePath }) => {
+            const result = await loadAllowedPackages(workspaceRoot, filePath);
+            return { layerName, result };
+        })
+    );
+
+    for (const { layerName, result } of results) {
+        if (!result.success) {
+            throw new StratifyError(result.error);
+        }
+        map.set(layerName, result.value);
     }
 
     return map;

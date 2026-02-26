@@ -1,6 +1,6 @@
 # Stratify
 
-Enforce architectural layer boundaries in monorepos. Catches invalid cross-layer dependencies at build time by analyzing `workspace:` protocol imports in `package.json` files.
+Enforce architectural layer boundaries in monorepos. Catches invalid cross-layer dependencies at build time by analyzing internal dependency protocols (e.g. `workspace:`, `link:`, `file:`) in `package.json` files.
 
 ## Installation
 
@@ -243,21 +243,23 @@ Controls how violations are reported.
 
 ### `workspaces` (optional)
 
-Controls which packages are discovered for validation.
+Controls which packages are discovered and how internal dependencies are detected.
 
 ```json
 {
     "workspaces": {
-        "patterns": ["packages/**/*", "shared/**/*"]
+        "patterns": ["packages/**/*", "shared/**/*"],
+        "protocols": ["workspace:", "link:"],
+        "ignore": ["**/node_modules/**", "**/lib/**", "**/dist/**", "**/build/**"]
     }
 }
 ```
 
-| Field      | Type       | Default             | Description                                                                     |
-| ---------- | ---------- | ------------------- | ------------------------------------------------------------------------------- |
-| `patterns` | `string[]` | `["packages/**/*"]` | Glob patterns to locate workspace packages (each must contain a `package.json`) |
-
-Ignored paths (hardcoded): `**/node_modules/**`, `**/lib/**`, `**/dist/**`.
+| Field       | Type       | Default                                                    | Description                                                                                               |
+| ----------- | ---------- | ---------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| `patterns`  | `string[]` | `["packages/**/*"]`                                        | Glob patterns to locate workspace packages (each must contain a `package.json`)                           |
+| `protocols` | `string[]` | `["workspace:"]`                                           | Version-string prefixes that identify internal dependencies. Common values: `"workspace:"`, `"link:"`, `"portal:"`, `"file:"` |
+| `ignore`    | `string[]` | `["**/node_modules/**", "**/lib/**", "**/dist/**"]`        | Glob patterns to exclude from package discovery                                                           |
 
 ## Layer Definition Reference
 
@@ -277,7 +279,7 @@ Packages missing the `"layer"` field produce a `missing-layer` violation.
 
 ### Dependency Detection
 
-Only `workspace:` protocol dependencies are checked, across all three dependency fields:
+By default, only `workspace:` protocol dependencies are checked. You can configure additional protocols (e.g. `link:`, `portal:`, `file:`) via the `workspaces.protocols` config field. All three dependency fields are scanned:
 
 -   `dependencies`
 -   `devDependencies`
@@ -379,7 +381,9 @@ Use `"*"` to allow a layer to depend on any other layer:
         "mode": "error"
     },
     "workspaces": {
-        "patterns": ["packages/**/*", "libs/**/*"]
+        "patterns": ["packages/**/*", "libs/**/*"],
+        "protocols": ["workspace:"],
+        "ignore": ["**/node_modules/**", "**/lib/**", "**/dist/**"]
     }
 }
 ```

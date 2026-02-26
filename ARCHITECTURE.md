@@ -86,10 +86,10 @@ This document describes the internal architecture of `stratify`.
 | `result.ts`          | `Result<T, E>` discriminated union with `ok()`, `err()`, `isOk()`, `isErr()` constructors (internal only). |
 | `errors.ts`          | `LayerError`, `ConfigError`, `DiscoveryError` type definitions, `formatLayerError()`, and `StratifyError` class. |
 | `config-schema.ts`   | Runtime validation of raw config objects (`validateConfigSchema()`).                               |
-| `config-defaults.ts` | Default values and `applyDefaults()` for enforcement mode and workspace patterns.                  |
+| `config-defaults.ts` | Default values and `applyDefaults()` for enforcement mode, workspace patterns, protocols, and ignore patterns. |
 | `rules.ts`           | Individual rule predicates: `hasRequiredLayer()`, `isKnownLayer()`, `isDependencyAllowed()`, `isPackageAllowedInLayer()`. |
 | `validation.ts`      | Orchestrates all rules across packages (`validatePackages()`). Populates `detailedMessage` on violations. |
-| `package-parser.ts`  | Parses `package.json` into typed `Package` objects, extracts `workspace:` dependencies.            |
+| `package-parser.ts`  | Parses `package.json` into typed `Package` objects, extracts internal dependencies matching configured protocols. |
 
 ### Adapter Layer — `src/adapters/`
 
@@ -187,7 +187,7 @@ The CLI layer imports `StratifyError` directly from `core/errors.ts` for `instan
 ## Key Design Decisions
 
 1. **`Result<T, E>` internally, `throw` at the boundary** — core and adapter modules use `Result` for explicit, composable error paths. The public API converts failures to `StratifyError` throws so consumers use standard `try/catch`.
-2. **`workspace:` protocol only** — external npm dependencies are out of scope; layers govern internal monorepo architecture only.
+2. **Configurable protocol detection** — by default only `workspace:` dependencies are checked; users can opt in to `link:`, `portal:`, `file:`, or any future protocol via `workspaces.protocols`. External npm-registry dependencies remain out of scope; layers govern internal monorepo architecture only.
 3. **`Promise.allSettled` for discovery** — one broken `package.json` doesn't abort the entire scan; it becomes a warning.
 4. **Config file as single source of truth** — layers, enforcement mode, and workspace patterns all live in `stratify.config.json`. No convention-based magic.
 5. **Self-describing violations** — each `Violation` carries a `detailedMessage` with rich, actionable context. No separate formatters needed; consumers loop and print.

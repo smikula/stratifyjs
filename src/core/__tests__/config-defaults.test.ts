@@ -1,6 +1,6 @@
 import { applyDefaults, DEFAULT_ENFORCEMENT, DEFAULT_WORKSPACES } from '../config-defaults.js';
 import type { LayerConfig } from '../../types/types.js';
-import { DEFAULT_PROTOCOLS, DEFAULT_IGNORE } from '../constants.js';
+import { DEFAULT_PATTERNS, DEFAULT_PROTOCOLS, DEFAULT_IGNORE } from '../constants.js';
 
 describe('applyDefaults', () => {
     // ── Minimal config (all defaults applied) ──────────────────────────
@@ -21,7 +21,7 @@ describe('applyDefaults', () => {
         expect(resolved.enforcement.mode).toBe('warn');
         // Workspaces defaults to ['packages/**/*']
         expect(resolved.workspaces).toEqual(DEFAULT_WORKSPACES);
-        expect(resolved.workspaces.patterns).toEqual(['packages/**/*']);
+        expect(resolved.workspaces.patterns).toEqual(DEFAULT_PATTERNS);
         expect(resolved.workspaces.protocols).toEqual(DEFAULT_PROTOCOLS);
         expect(resolved.workspaces.ignore).toEqual(DEFAULT_IGNORE);
     });
@@ -37,7 +37,7 @@ describe('applyDefaults', () => {
 
         expect(resolved.enforcement.mode).toBe('error');
         // workspaces should still get defaults
-        expect(resolved.workspaces.patterns).toEqual(['packages/**/*']);
+        expect(resolved.workspaces.patterns).toEqual(DEFAULT_PATTERNS);
         expect(resolved.workspaces.protocols).toEqual(DEFAULT_PROTOCOLS);
         expect(resolved.workspaces.ignore).toEqual(DEFAULT_IGNORE);
     });

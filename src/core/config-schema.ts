@@ -1,5 +1,5 @@
 import type {
-    LayerConfig,
+    StratifyConfig,
     LayerDefinition,
     LayerMap,
     EnforcementConfig,
@@ -10,12 +10,12 @@ import type { Result } from './result.js';
 import { ok, err } from './result.js';
 
 /**
- * Validate that a raw parsed object conforms to the LayerConfig schema.
+ * Validate that a raw parsed object conforms to the StratifyConfig schema.
  *
  * @param raw - The raw parsed JSON object to validate
- * @returns A Result containing the validated LayerConfig, or a ConfigError with details of all validation issues
+ * @returns A Result containing the validated StratifyConfig, or a ConfigError with details of all validation issues
  */
-export function validateConfigSchema(raw: unknown): Result<LayerConfig, ConfigError> {
+export function validateConfigSchema(raw: unknown): Result<StratifyConfig, ConfigError> {
     if (typeof raw !== 'object' || raw === null) {
         return err({ type: 'config-validation-error', message: 'Config must be a JSON object' });
     }

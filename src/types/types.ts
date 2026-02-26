@@ -1,9 +1,19 @@
 /**
- * Fully resolved stratify configuration with all defaults applied.
- * This is the public config type — passed via options.config and
- * used throughout the library.
+ * Stratify configuration as written by the user.
+ * Only `layers` is required — `workspaces` and `enforcement` are optional.
+ * When omitted (or partially provided), defaults are applied internally.
  */
 export interface StratifyConfig {
+    layers: LayerMap;
+    workspaces?: Partial<WorkspaceConfig>;
+    enforcement?: Partial<EnforcementConfig>;
+}
+
+/**
+ * Fully resolved stratify configuration with all defaults applied.
+ * Used internally throughout the library after defaults have been merged.
+ */
+export interface StratifyResolvedConfig {
     layers: LayerMap;
     workspaces: WorkspaceConfig;
     enforcement: EnforcementConfig;
@@ -39,15 +49,6 @@ export interface LayerDefinition {
      * Mutually exclusive with allowedPackages.
      */
     allowedPackagesFile?: string;
-}
-
-/**
- * Layer configuration file (as written by user)
- */
-export interface LayerConfig {
-    layers: LayerMap;
-    workspaces?: Partial<WorkspaceConfig>;
-    enforcement?: Partial<EnforcementConfig>;
 }
 
 /**

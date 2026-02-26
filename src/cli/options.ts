@@ -1,5 +1,5 @@
 import type { ValidateLayersOptions } from '../api/api.js';
-import { StratifyConfig } from '../api/index.js';
+import type { StratifyResolvedConfig } from '../api/index.js';
 
 /**
  * Parsed CLI options.
@@ -30,7 +30,7 @@ export function parseCliOptions(raw: Record<string, unknown>): CliOptions {
  */
 export function toLibraryOptions(
     cli: CliOptions,
-    resolvedConfig?: StratifyConfig
+    resolvedConfig?: StratifyResolvedConfig
 ): ValidateLayersOptions {
     return {
         workspaceRoot: cli.root,

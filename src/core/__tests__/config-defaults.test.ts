@@ -1,11 +1,11 @@
 import { applyDefaults, DEFAULT_ENFORCEMENT, DEFAULT_WORKSPACES } from '../config-defaults.js';
-import type { LayerConfig } from '../../types/types.js';
+import type { StratifyConfig } from '../../types/types.js';
 import { DEFAULT_PATTERNS, DEFAULT_PROTOCOLS, DEFAULT_IGNORE } from '../constants.js';
 
 describe('applyDefaults', () => {
     // ── Minimal config (all defaults applied) ──────────────────────────
     it('applies default enforcement and workspaces when not specified', () => {
-        const config: LayerConfig = {
+        const config: StratifyConfig = {
             layers: {
                 core: { allowedDependencies: [] },
             },
@@ -28,7 +28,7 @@ describe('applyDefaults', () => {
 
     // ── Override enforcement only ──────────────────────────────────────
     it('uses provided enforcement mode', () => {
-        const config: LayerConfig = {
+        const config: StratifyConfig = {
             layers: { core: { allowedDependencies: [] } },
             enforcement: { mode: 'error' },
         };
@@ -44,7 +44,7 @@ describe('applyDefaults', () => {
 
     // ── Override workspaces only ───────────────────────────────────────
     it('uses provided workspaces patterns', () => {
-        const config: LayerConfig = {
+        const config: StratifyConfig = {
             layers: { core: { allowedDependencies: [] } },
             workspaces: { patterns: ['apps/*', 'libs/*'] },
         };
@@ -60,7 +60,7 @@ describe('applyDefaults', () => {
 
     // ── Override both ──────────────────────────────────────────────────
     it('uses overrides when provided', () => {
-        const config: LayerConfig = {
+        const config: StratifyConfig = {
             layers: { core: { allowedDependencies: [] } },
             enforcement: { mode: 'off' },
             workspaces: { patterns: ['modules/*'], protocols: ['workspace:'] },
@@ -75,7 +75,7 @@ describe('applyDefaults', () => {
     });
 
     it('uses provided workspaces protocols', () => {
-        const config: LayerConfig = {
+        const config: StratifyConfig = {
             layers: { core: { allowedDependencies: [] } },
             workspaces: { patterns: ['packages/*'], protocols: ['workspace:', 'link:'] },
         };
@@ -88,7 +88,7 @@ describe('applyDefaults', () => {
     });
 
     it('uses provided workspaces ignore', () => {
-        const config: LayerConfig = {
+        const config: StratifyConfig = {
             layers: { core: { allowedDependencies: [] } },
             workspaces: {
                 patterns: ['packages/*'],

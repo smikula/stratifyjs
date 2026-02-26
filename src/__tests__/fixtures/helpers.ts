@@ -1,16 +1,23 @@
-import type { StratifyConfig, Package, Violation, ViolationType } from '../../types/types.js';
+import type {
+    StratifyResolvedConfig,
+    Package,
+    Violation,
+    ViolationType,
+} from '../../types/types.js';
 
 /**
- * Creates a StratifyConfig with the standard 3-layer setup (ui → core → infra).
+ * Creates a StratifyResolvedConfig with the standard 3-layer setup (ui → core → infra).
  *
  * Usage:
  *   const config = createTestConfig(); // all defaults
  *   const config = createTestConfig({ enforcement: { mode: 'error' } }); // override mode
  *
- * The `Partial<StratifyConfig>` parameter uses TypeScript's Partial utility type,
+ * The `Partial<StratifyResolvedConfig>` parameter uses TypeScript's Partial utility type,
  * which makes every property optional. Spread (`...`) merges overrides on top of defaults.
  */
-export function createTestConfig(overrides?: Partial<StratifyConfig>): StratifyConfig {
+export function createTestConfig(
+    overrides?: Partial<StratifyResolvedConfig>
+): StratifyResolvedConfig {
     return {
         layers: {
             ui: { allowedDependencies: ['core'] },

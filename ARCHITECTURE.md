@@ -57,7 +57,7 @@ This document describes the internal architecture of `stratify`.
 │ Types                              src/types/           │
 │                                                         │
 │ Shared type definitions. No runtime code, no deps.      │
-│ Foundation of the type system (Package, LayerConfig,    │
+│ Foundation of the type system (Package, StratifyConfig, │
 │ Violation, etc.)                                        │
 └─────────────────────────────────────────────────────────┘
 ```
@@ -103,7 +103,7 @@ This document describes the internal architecture of `stratify`.
 
 | Module     | Purpose                                                                                                                                                                 |
 | ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `types.ts` | All shared interfaces: `Package`, `LayerDefinition`, `LayerMap`, `EnforcementConfig`, `WorkspaceConfig`, `LayerConfig`, `StratifyConfig`, `Violation`, `ViolationType`. |
+| `types.ts` | All shared interfaces: `Package`, `LayerDefinition`, `LayerMap`, `EnforcementConfig`, `WorkspaceConfig`, `StratifyConfig`, `StratifyResolvedConfig`, `Violation`, `ViolationType`. |
 
 ## Data Flow
 

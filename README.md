@@ -134,7 +134,7 @@ try {
 | --------------- | ---------------- | ------------------------ | ---------------------------------------------- |
 | `workspaceRoot` | `string`         | `process.cwd()`          | Workspace root directory                       |
 | `configPath`    | `string`         | `'stratify.config.json'` | Path to config file, relative to workspaceRoot |
-| `config`        | `StratifyConfig` | —                        | Pre-built config (skips file loading)          |
+| `config`        | `StratifyConfig` | —                        | Pre-built config (skips file loading). `workspaces` and `enforcement` are optional — defaults are applied when omitted. |
 | `mode`          | `string`         | From config              | Override: `'error'`, `'warn'`, or `'off'`      |
 
 ### Result
@@ -161,8 +161,7 @@ const result = await validateLayers({
             features: { allowedDependencies: ['core'] },
             core: { allowedDependencies: [] },
         },
-        enforcement: { mode: 'error' },
-        workspaces: { patterns: ['packages/*'] },
+        // enforcement and workspaces are optional — defaults applied automatically
     },
 });
 ```

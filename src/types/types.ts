@@ -55,6 +55,15 @@ export interface LayerConfig {
  */
 export interface WorkspaceConfig {
     patterns: string[];
+    /**
+     * Version-string prefixes that identify internal (monorepo) dependencies.
+     * Each entry is matched via `version.startsWith(prefix)`.
+     *
+     * Common protocols: "workspace:", "link:", "portal:", "file:"
+     *
+     * @default ["workspace:"]
+     */
+    protocols: string[];
 }
 
 /**

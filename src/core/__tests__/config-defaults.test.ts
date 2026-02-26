@@ -21,6 +21,7 @@ describe('applyDefaults', () => {
         // Workspaces defaults to ['packages/**/*']
         expect(resolved.workspaces).toEqual(DEFAULT_WORKSPACES);
         expect(resolved.workspaces.patterns).toEqual(['packages/**/*']);
+        expect(resolved.workspaces.protocols).toEqual(['workspace:']);
     });
 
     // ── Override enforcement only ──────────────────────────────────────
@@ -35,6 +36,7 @@ describe('applyDefaults', () => {
         expect(resolved.enforcement.mode).toBe('error');
         // workspaces should still get defaults
         expect(resolved.workspaces.patterns).toEqual(['packages/**/*']);
+        expect(resolved.workspaces.protocols).toEqual(['workspace:']);
     });
 
     // ── Override workspaces only ───────────────────────────────────────
@@ -47,6 +49,7 @@ describe('applyDefaults', () => {
         const resolved = applyDefaults(config);
 
         expect(resolved.workspaces.patterns).toEqual(['apps/*', 'libs/*']);
+        expect(resolved.workspaces.protocols).toEqual(['workspace:']);
         // enforcement should still get defaults
         expect(resolved.enforcement.mode).toBe('warn');
     });
@@ -56,12 +59,25 @@ describe('applyDefaults', () => {
         const config: LayerConfig = {
             layers: { core: { allowedDependencies: [] } },
             enforcement: { mode: 'off' },
-            workspaces: { patterns: ['modules/*'] },
+            workspaces: { patterns: ['modules/*'], protocols: ['workspace:'] },
         };
 
         const resolved = applyDefaults(config);
 
         expect(resolved.enforcement.mode).toBe('off');
         expect(resolved.workspaces.patterns).toEqual(['modules/*']);
+        expect(resolved.workspaces.protocols).toEqual(['workspace:']);
+    });
+
+    it('uses provided workspaces protocols', () => {
+        const config: LayerConfig = {
+            layers: { core: { allowedDependencies: [] } },
+            workspaces: { patterns: ['packages/*'], protocols: ['workspace:', 'link:'] },
+        };
+
+        const resolved = applyDefaults(config);
+
+        expect(resolved.workspaces.protocols).toEqual(['workspace:', 'link:']);
+        expect(resolved.workspaces.patterns).toEqual(['packages/*']);
     });
 });

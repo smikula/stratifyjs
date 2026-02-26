@@ -47,7 +47,7 @@ describe('validateLayers', () => {
                     infra: { allowedDependencies: [] },
                 },
                 enforcement: { mode: 'warn' },
-                workspaces: { patterns: ['packages/*'] },
+                workspaces: { patterns: ['packages/*'], protocols: ['workspace:'] },
             },
         });
 
@@ -66,7 +66,7 @@ describe('validateLayers', () => {
                     infra: { allowedDependencies: [] },
                 },
                 enforcement: { mode: 'error' },
-                workspaces: { patterns: ['packages/*'] },
+                workspaces: { patterns: ['packages/*'], protocols: ['workspace:'] },
             },
         });
 
@@ -102,7 +102,7 @@ describe('validateLayers', () => {
                     infra: { allowedDependencies: [] },
                 },
                 enforcement: { mode: 'warn' },
-                workspaces: { patterns: ['packages/*'] },
+                workspaces: { patterns: ['packages/*'], protocols: ['workspace:'] },
             },
         });
 
@@ -119,7 +119,7 @@ describe('validateLayers', () => {
                     infra: { allowedDependencies: [] },
                 },
                 enforcement: { mode: 'off' },
-                workspaces: { patterns: ['packages/*'] },
+                workspaces: { patterns: ['packages/*'], protocols: ['workspace:'] },
             },
         });
 
@@ -151,7 +151,7 @@ describe('validateLayers', () => {
                     infra: { allowedDependencies: [] },
                 },
                 enforcement: { mode: 'error' },
-                workspaces: { patterns: ['packages/*'] },
+                workspaces: { patterns: ['packages/*'], protocols: ['workspace:'] },
             },
             mode: 'warn',
         });

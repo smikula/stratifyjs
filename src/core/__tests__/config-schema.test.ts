@@ -134,6 +134,48 @@ describe('validateConfigSchema', () => {
             expect(result.error.message).toContain('array of strings');
         }
     });
+
+    it('returns ok for valid workspaces.protocols', () => {
+        const config = {
+            layers: { core: { allowedDependencies: [] } },
+            workspaces: { protocols: ['workspace:', 'link:'] },
+        };
+        const result = validateConfigSchema(config);
+        expect(result.success).toBe(true);
+    });
+
+    it('returns ok for config without protocols (uses default)', () => {
+        const config = {
+            layers: { core: { allowedDependencies: [] } },
+            workspaces: { patterns: ['packages/*'] },
+        };
+        const result = validateConfigSchema(config);
+        expect(result.success).toBe(true);
+    });
+
+    it('returns error for invalid workspaces.protocols (non-array)', () => {
+        const config = {
+            layers: { core: { allowedDependencies: [] } },
+            workspaces: { protocols: 'workspace:' },
+        };
+        const result = validateConfigSchema(config);
+        expect(result.success).toBe(false);
+        if (!result.success) {
+            expect(result.error.message).toContain('array of strings');
+        }
+    });
+
+    it('returns error for workspaces.protocols with non-string elements', () => {
+        const config = {
+            layers: { core: { allowedDependencies: [] } },
+            workspaces: { protocols: [123, true] },
+        };
+        const result = validateConfigSchema(config);
+        expect(result.success).toBe(false);
+        if (!result.success) {
+            expect(result.error.message).toContain('array of strings');
+        }
+    });
 });
 
 describe('validateLayerDefinition', () => {

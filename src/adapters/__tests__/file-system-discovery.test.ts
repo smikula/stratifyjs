@@ -8,7 +8,10 @@ const MONOREPO_DIR = resolve(__dirname, '..', '..', '__tests__', 'fixtures', 'sa
 
 describe('discoverPackages', () => {
     it('discovers all 4 packages in the sample monorepo', async () => {
-        const result = await discoverPackages(MONOREPO_DIR, { patterns: ['packages/*'] });
+        const result = await discoverPackages(MONOREPO_DIR, {
+            patterns: ['packages/*'],
+            protocols: ['workspace:'],
+        });
 
         expect(result.success).toBe(true);
         if (result.success) {
@@ -30,7 +33,10 @@ describe('discoverPackages', () => {
     });
 
     it('extracts layers correctly from discovered packages', async () => {
-        const result = await discoverPackages(MONOREPO_DIR, { patterns: ['packages/*'] });
+        const result = await discoverPackages(MONOREPO_DIR, {
+            patterns: ['packages/*'],
+            protocols: ['workspace:'],
+        });
 
         expect(result.success).toBe(true);
         if (result.success) {
@@ -45,7 +51,10 @@ describe('discoverPackages', () => {
     });
 
     it('extracts workspace dependencies correctly', async () => {
-        const result = await discoverPackages(MONOREPO_DIR, { patterns: ['packages/*'] });
+        const result = await discoverPackages(MONOREPO_DIR, {
+            patterns: ['packages/*'],
+            protocols: ['workspace:'],
+        });
 
         expect(result.success).toBe(true);
         if (result.success) {
@@ -64,7 +73,10 @@ describe('discoverPackages', () => {
     });
 
     it('returns empty packages when pattern matches nothing', async () => {
-        const result = await discoverPackages(MONOREPO_DIR, { patterns: ['nonexistent/*'] });
+        const result = await discoverPackages(MONOREPO_DIR, {
+            patterns: ['nonexistent/*'],
+            protocols: ['workspace:'],
+        });
 
         expect(result.success).toBe(true);
         if (result.success) {

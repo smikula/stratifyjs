@@ -92,7 +92,7 @@ export async function discoverPackages(
         }
 
         const { parsed, fullPath } = entry.value;
-        const result = parsePackageJson(parsed, relativePath);
+        const result = parsePackageJson(parsed, relativePath, config.protocols);
 
         if (result.success) {
             packages.push(result.value);

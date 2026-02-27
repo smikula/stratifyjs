@@ -1,0 +1,61 @@
+name: Version Bump
+
+# Runs after code is merged to master.
+# Consumes change files and bumps version + changelog.
+on:
+  push:
+    branches: [master]
+
+jobs:
+  bump:
+    runs-on: ubuntu-latest
+
+    # Skip this workflow if the push was made by the bot itself
+    # (i.e., the version-bump commit). Without this guard, the workflow
+    # would trigger on its own commit and run in an infinite loop.
+    if: github.actor != 'github-actions[bot]'
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Full git history is needed so beachball can diff and find change files.
+          fetch-depth: 0
+
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24.x'
+          cache: 'yarn'
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Configure git identity
+        # The bot identity is used for the bump commit.
+        # "github-actions[bot]" is the standard identity for GitHub Actions automation.
+        # The email uses the noreply address provided by GitHub for this bot account.
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Bump version and update changelog
+        # `beachball bump` does the following:
+        # 1. Reads all JSON files in the change/ directory
+        # 2. Determines the highest bump type (e.g., 3 patches + 1 minor = minor)
+        # 3. Bumps the "version" field in package.json accordingly
+        # 4. Prepends new entries to CHANGELOG.md
+        # 5. Deletes the consumed change files from change/
+        run: yarn beachball bump
+
+      - name: Commit and push if there are changes
+        # `git diff --cached --quiet` exits with code 1 if there are staged changes.
+        # If beachball made changes (bumped version, updated changelog, deleted change files),
+        # we commit and push. If there are no change files (nothing to bump), this is a no-op.
+        run: |
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No changes to commit (no change files found)."
+          else
+            git commit -m "Bump version and update CHANGELOG.md [skip ci]"
+            git push
+          fi

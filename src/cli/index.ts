@@ -3,8 +3,7 @@ import { program } from 'commander';
 import { createRequire } from 'module';
 import { parseCliOptions } from './options.js';
 import { handleValidateCommand } from './command-handler.js';
-import { DEFAULT_CONFIG_FILENAME } from '../core/constants.js';
-import { DEFAULT_OUTPUT_FORMAT } from './cli-defaults.js';
+import { DEFAULT_CONFIG_FILENAME, DEFAULT_OUTPUT_FORMAT } from '../core/constants.js';
 
 const require = createRequire(import.meta.url);
 const { version } = require('../../package.json') as { version: string };

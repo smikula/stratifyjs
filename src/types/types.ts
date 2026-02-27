@@ -125,3 +125,8 @@ export interface Package {
     dependencies: string[];
     path: string;
 }
+
+/**
+ * Output formats for CLI results.
+ */
+export type OutputFormat = 'console' | 'json';

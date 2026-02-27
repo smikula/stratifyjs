@@ -20,7 +20,7 @@ This document describes the internal architecture of `stratify`.
 │ colors for progress output, and determines exit codes.  │
 │                                                         │
 │ Owns: process.argv, process.exit, terminal colors       │
-│ Depends on: Library API                                 │
+│ Depends on: Library API, Core, Adapters, Types          │
 └────────────────────────┬────────────────────────────────┘
                          │
                          ▼
@@ -32,7 +32,7 @@ This document describes the internal architecture of `stratify`.
 │ validation. Throws StratifyError on failures.           │
 │                                                         │
 │ Owns: ValidateLayersOptions, ValidateLayersResult       │
-│ Depends on: Core, Adapters                              │
+│ Depends on: Core, Adapters, Types                       │
 └──────────┬──────────────────────────┬───────────────────┘
            │                          │
            ▼                          ▼
@@ -71,7 +71,7 @@ This document describes the internal architecture of `stratify`.
 | `index.ts`           | Entry point (`#!/usr/bin/env node`). Parses args with `commander`, reads package version, delegates to `command-handler`. |
 | `options.ts`         | Converts raw commander output to typed `CliOptions` and maps them to `ValidateLayersOptions`.                             |
 | `command-handler.ts` | Executes the enforce command: calls `validateLayers()`, prints output via `detailedMessage`, returns an exit code.        |
-| `cli-defaults.ts`    | CLI-layer default values (e.g. `DEFAULT_OUTPUT_FORMAT`). Kept here to avoid leaking presentation concerns into Core.     |
+| `output-helpers.ts`  | CLI-specific colored terminal output functions (`logInfo`, `logSuccess`, `logError`, `logWarning`, `logGray`, `logPlain`) using `picocolors`. |
 
 ### Library API Layer — `src/api/`
 
@@ -176,15 +176,17 @@ Non-fatal issues during package discovery (e.g., a single unreadable `package.js
 
 The layers follow a strict dependency direction:
 
-| Layer       | May Import From                             |
-| ----------- | ------------------------------------------- |
-| CLI         | Library API, Core (errors + constants)      |
-| Library API | Core, Adapters                              |
-| Core        | Types                                       |
-| Adapters    | Core (types, result, parser, schema), Types |
-| Types       | _(nothing)_                                 |
+| Layer       | May Import From                                                    |
+| ----------- | ------------------------------------------------------------------ |
+| CLI         | Library API, Core (errors + constants), Adapters (config loading), Types |
+| Library API | Core, Adapters, Types                                              |
+| Core        | Types                                                              |
+| Adapters    | Core (types, result, parser, schema), Types                        |
+| Types       | _(nothing)_                                                        |
 
-The CLI layer imports `StratifyError` from `core/errors.ts` for `instanceof` checks and domain constants from `core/constants.ts` (e.g. `DEFAULT_CONFIG_FILENAME`). Presentation-only defaults (e.g. `DEFAULT_OUTPUT_FORMAT`) live in `cli/cli-defaults.ts` to avoid leaking CLI concerns into Core. All other access goes through the library API's public surface.
+The CLI layer imports `StratifyError` from `core/errors.ts` for `instanceof` checks and domain constants from `core/constants.ts` (e.g. `DEFAULT_CONFIG_FILENAME`, `DEFAULT_OUTPUT_FORMAT`). The `options.ts` module also imports the `EnforcementMode` type directly from `types/`.
+
+Additionally, `command-handler.ts` imports `loadConfigFromFile` directly from the adapter layer. This is because the CLI needs to load and merge config before calling the API (config options can originate from the file or from CLI flags). This CLI → Adapters edge is a known architectural tension; if config loading were moved behind the API, the edge could be eliminated and the CLI would depend only on the API, Core, and Types layers.
 
 ## Key Design Decisions
 
@@ -194,3 +196,42 @@ The CLI layer imports `StratifyError` from `core/errors.ts` for `instanceof` che
 4. **Config file as single source of truth** — layers, enforcement mode, and workspace patterns all live in `stratify.config.json`. No convention-based magic.
 5. **Self-describing violations** — each `Violation` carries a `detailedMessage` with rich, actionable context. No separate formatters needed; consumers loop and print.
 6. **Minimal public API surface** — one function (`validateLayers`), one error class (`StratifyError`), and the essential types. Internal plumbing (`Result`, `buildReport`, `validatePackages`, etc.) is not exported.
+
+## Self-Applied Configuration
+
+If stratify were used to enforce its own architecture, the configuration would look like this:
+
+```json
+{
+    "layers": {
+        "cli": {
+            "description": "CLI entry point — parses argv, prints output, exit codes",
+            "allowedDependencies": ["api", "core", "adapters", "types"]
+        },
+        "api": {
+            "description": "Public programmatic interface (validateLayers)",
+            "allowedDependencies": ["core", "adapters", "types"]
+        },
+        "adapters": {
+            "description": "I/O boundaries — filesystem, glob discovery",
+            "allowedDependencies": ["core", "types"]
+        },
+        "core": {
+            "description": "Pure business logic — validation, rules, config, constants",
+            "allowedDependencies": ["types"]
+        },
+        "types": {
+            "description": "Shared interfaces and type definitions — no runtime code",
+            "allowedDependencies": []
+        }
+    },
+    "enforcement": {
+        "mode": "error"
+    },
+    "workspaces": {
+        "patterns": ["src/*"]
+    }
+}
+```
+
+Note that `cli` currently requires `allowedDependencies: ["api", "core", "adapters", "types"]` because `command-handler.ts` imports `loadConfigFromFile` directly from the adapter layer. A stricter configuration — `"allowedDependencies": ["api", "core", "types"]` — would surface this as a violation, which could be resolved by moving config-file loading behind the API.

@@ -1,17 +1,17 @@
 import { resolve } from 'path';
+import { loadAllowedPackages } from '../adapters/allowlist-file-loader.js';
+import { loadConfigFromFile } from '../adapters/config-file-loader.js';
+import { discoverPackages } from '../adapters/file-system-discovery.js';
+import { applyDefaults } from '../core/config-defaults.js';
+import { DEFAULT_CONFIG_FILENAME } from '../core/constants.js';
+import { StratifyError } from '../core/errors.js';
+import { validatePackages } from '../core/validation.js';
 import type {
     StratifyConfig,
     StratifyResolvedConfig,
     Violation,
     EnforcementMode,
 } from '../types/types.js';
-import { StratifyError } from '../core/errors.js';
-import { validatePackages } from '../core/validation.js';
-import { loadConfigFromFile } from '../adapters/config-file-loader.js';
-import { discoverPackages } from '../adapters/file-system-discovery.js';
-import { loadAllowedPackages } from '../adapters/allowlist-file-loader.js';
-import { applyDefaults } from '../core/config-defaults.js';
-import { DEFAULT_CONFIG_FILENAME } from '../core/constants.js';
 
 /**
  * Options for the validateLayers API.

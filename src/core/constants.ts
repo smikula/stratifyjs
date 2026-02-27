@@ -1,4 +1,4 @@
-import type { EnforcementMode } from '../types/types.js';
+import type { EnforcementMode, OutputFormat } from '../types/types.js';
 
 /*
  * Default glob patterns for identifying packages within the monorepo.
@@ -41,3 +41,8 @@ export const DEFAULT_CONFIG_FILENAME = 'stratify.config.json';
  * Wildcard token in allowedDependencies that permits depending on any layer.
  */
 export const WILDCARD_LAYER = '*';
+
+/**
+ * Default CLI output format.
+ */
+export const DEFAULT_OUTPUT_FORMAT: OutputFormat = 'console';

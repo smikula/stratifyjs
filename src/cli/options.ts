@@ -1,8 +1,7 @@
 import type { ValidateLayersOptions } from '../api/api.js';
 import type { StratifyConfig } from '../api/index.js';
-import type { EnforcementMode } from '../types/types.js';
-import { DEFAULT_CONFIG_FILENAME } from '../core/constants.js';
-import { DEFAULT_OUTPUT_FORMAT } from './cli-defaults.js';
+import type { EnforcementMode, OutputFormat } from '../types/types.js';
+import { DEFAULT_CONFIG_FILENAME, DEFAULT_OUTPUT_FORMAT } from '../core/constants.js';
 
 /**
  * Parsed CLI options.
@@ -11,7 +10,7 @@ export interface CliOptions {
     config: string;
     root: string;
     mode?: EnforcementMode;
-    format: 'console' | 'json';
+    format: OutputFormat;
 }
 
 /**

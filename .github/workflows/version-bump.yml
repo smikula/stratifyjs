@@ -9,6 +9,9 @@ on:
 jobs:
   bump:
     runs-on: ubuntu-latest
+    permissions:
+      # Allow GITHUB_TOKEN to push
+      contents: write
 
     # Skip this workflow if the push was made by the bot itself
     # (i.e., the version-bump commit). Without this guard, the workflow

@@ -1,0 +1,7 @@
+{
+  "type": "none",
+  "comment": "fix: update permissions in version bump workflow",
+  "packageName": "stratifyjs",
+  "email": "wbarrantes@hotmail.com",
+  "dependentChangeType": "none"
+}

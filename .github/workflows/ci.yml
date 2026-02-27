@@ -12,6 +12,9 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          # Beachball needs full git history to diff against origin/master
+          fetch-depth: 0
 
       - name: Use Node.js
         uses: actions/setup-node@v4
@@ -27,3 +30,10 @@ jobs:
 
       - name: Run tests
         run: yarn test
+
+      # Enforce that every PR includes a change file.
+      # Only runs on PRs — not on direct pushes to master (where change files
+      # have already been consumed by the version-bump workflow).
+      - name: Check for change files
+        if: github.event_name == 'pull_request'
+        run: yarn checkchange

@@ -420,6 +420,12 @@ yarn build
 yarn typecheck
 ```
 
+## Documenting Changes
+
+This project uses [Beachball](https://microsoft.github.io/beachball/) to manage versioning and changelogs. Every PR that affects the published package must include a change file. Run `yarn change` before submitting your PR and follow the prompts. CI will fail if the change file is missing.
+
+> PRs that only touch tests, documentation, or configuration files are excluded from this requirement.
+
 ## License
 
 MIT

@@ -8,6 +8,7 @@ import type {
 import type { ConfigError } from './errors.js';
 import type { Result } from './result.js';
 import { ok, err } from './result.js';
+import { VALID_ENFORCEMENT_MODES } from './constants.js';
 
 /**
  * Validate that a raw parsed object conforms to the StratifyConfig schema.
@@ -62,11 +63,11 @@ export function validateConfigSchema(raw: unknown): Result<StratifyConfig, Confi
         if (
             enforcement.mode !== undefined &&
             (typeof enforcement.mode !== 'string' ||
-                !['error', 'warn', 'off'].includes(enforcement.mode))
+                !(VALID_ENFORCEMENT_MODES as readonly string[]).includes(enforcement.mode))
         ) {
             return err({
                 type: 'config-validation-error',
-                message: `Invalid enforcement mode: "${enforcement.mode}". Must be "error", "warn", or "off"`,
+                message: `Invalid enforcement mode: "${enforcement.mode}". Must be ${VALID_ENFORCEMENT_MODES.map(m => `"${m}"`).join(', ')}`,
             });
         }
     }

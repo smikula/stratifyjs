@@ -4,10 +4,15 @@ import type {
     EnforcementConfig,
     WorkspaceConfig,
 } from '../types/types.js';
-import { DEFAULT_PATTERNS, DEFAULT_PROTOCOLS, DEFAULT_IGNORE } from './constants.js';
+import {
+    DEFAULT_PATTERNS,
+    DEFAULT_PROTOCOLS,
+    DEFAULT_IGNORE,
+    DEFAULT_ENFORCEMENT_MODE,
+} from './constants.js';
 
 export const DEFAULT_ENFORCEMENT: EnforcementConfig = {
-    mode: 'warn',
+    mode: DEFAULT_ENFORCEMENT_MODE,
 };
 
 export const DEFAULT_WORKSPACES: WorkspaceConfig = {

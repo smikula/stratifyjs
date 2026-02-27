@@ -79,10 +79,15 @@ export interface WorkspaceConfig {
 }
 
 /**
+ * Valid enforcement mode values.
+ */
+export type EnforcementMode = 'error' | 'warn' | 'off';
+
+/**
  * Enforcement configuration
  */
 export interface EnforcementConfig {
-    mode: 'error' | 'warn' | 'off';
+    mode: EnforcementMode;
 }
 
 /**

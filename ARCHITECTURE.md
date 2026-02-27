@@ -71,6 +71,7 @@ This document describes the internal architecture of `stratify`.
 | `index.ts`           | Entry point (`#!/usr/bin/env node`). Parses args with `commander`, reads package version, delegates to `command-handler`. |
 | `options.ts`         | Converts raw commander output to typed `CliOptions` and maps them to `ValidateLayersOptions`.                             |
 | `command-handler.ts` | Executes the enforce command: calls `validateLayers()`, prints output via `detailedMessage`, returns an exit code.        |
+| `cli-defaults.ts`    | CLI-layer default values (e.g. `DEFAULT_OUTPUT_FORMAT`). Kept here to avoid leaking presentation concerns into Core.     |
 
 ### Library API Layer — `src/api/`
 
@@ -83,6 +84,7 @@ This document describes the internal architecture of `stratify`.
 
 | Module                            | Purpose                                                                                            |
 | --------------------------------- | -------------------------------------------------------------------------------------------------- |
+| `constants.ts`       | Shared domain constants: `DEFAULT_PATTERNS`, `DEFAULT_PROTOCOLS`, `DEFAULT_IGNORE`, `DEFAULT_CONFIG_FILENAME`, `VALID_ENFORCEMENT_MODES`, `WILDCARD_LAYER`. |
 | `result.ts`          | `Result<T, E>` discriminated union with `ok()`, `err()`, `isOk()`, `isErr()` constructors (internal only). |
 | `errors.ts`          | `LayerError`, `ConfigError`, `DiscoveryError` type definitions, `formatLayerError()`, and `StratifyError` class. |
 | `config-schema.ts`   | Runtime validation of raw config objects (`validateConfigSchema()`).                               |
@@ -176,13 +178,13 @@ The layers follow a strict dependency direction:
 
 | Layer       | May Import From                             |
 | ----------- | ------------------------------------------- |
-| CLI         | Library API, Core (StratifyError only)      |
+| CLI         | Library API, Core (errors + constants)      |
 | Library API | Core, Adapters                              |
 | Core        | Types                                       |
 | Adapters    | Core (types, result, parser, schema), Types |
 | Types       | _(nothing)_                                 |
 
-The CLI layer imports `StratifyError` directly from `core/errors.ts` for `instanceof` checks. All other access goes through the library API's public surface.
+The CLI layer imports `StratifyError` from `core/errors.ts` for `instanceof` checks and domain constants from `core/constants.ts` (e.g. `DEFAULT_CONFIG_FILENAME`). Presentation-only defaults (e.g. `DEFAULT_OUTPUT_FORMAT`) live in `cli/cli-defaults.ts` to avoid leaking CLI concerns into Core. All other access goes through the library API's public surface.
 
 ## Key Design Decisions
 

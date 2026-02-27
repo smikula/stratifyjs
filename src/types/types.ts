@@ -1,9 +1,19 @@
 /**
- * Fully resolved stratify configuration with all defaults applied.
- * This is the public config type — passed via options.config and
- * used throughout the library.
+ * Stratify configuration as written by the user.
+ * Only `layers` is required — `workspaces` and `enforcement` are optional.
+ * When omitted (or partially provided), defaults are applied internally.
  */
 export interface StratifyConfig {
+    layers: LayerMap;
+    workspaces?: Partial<WorkspaceConfig>;
+    enforcement?: Partial<EnforcementConfig>;
+}
+
+/**
+ * Fully resolved stratify configuration with all defaults applied.
+ * Used internally throughout the library after defaults have been merged.
+ */
+export interface StratifyResolvedConfig {
     layers: LayerMap;
     workspaces: WorkspaceConfig;
     enforcement: EnforcementConfig;
@@ -42,26 +52,42 @@ export interface LayerDefinition {
 }
 
 /**
- * Layer configuration file (as written by user)
- */
-export interface LayerConfig {
-    layers: LayerMap;
-    workspaces?: Partial<WorkspaceConfig>;
-    enforcement?: Partial<EnforcementConfig>;
-}
-
-/**
  * Workspace discovery configuration
  */
 export interface WorkspaceConfig {
+    /**
+     * Glob patterns to discover packages in the monorepo. Each pattern is relative
+     * to the workspace root and should point to directories containing package.json files.
+     */
     patterns: string[];
+    /**
+     * Version-string prefixes that identify internal (monorepo) dependencies.
+     * Each entry is matched via `version.startsWith(prefix)`.
+     *
+     * Common protocols: "workspace:", "link:", "portal:", "file:"
+     *
+     * @default ["workspace:"]
+     */
+    protocols: string[];
+    /**
+     * Glob patterns to exclude from package discovery.
+     * Paths matching any of these patterns are skipped during globbing.
+     *
+     * @default ["**​/node_modules/**", "**​/lib/**", "**​/dist/**"]
+     */
+    ignore: string[];
 }
+
+/**
+ * Valid enforcement mode values.
+ */
+export type EnforcementMode = 'error' | 'warn' | 'off';
 
 /**
  * Enforcement configuration
  */
 export interface EnforcementConfig {
-    mode: 'error' | 'warn' | 'off';
+    mode: EnforcementMode;
 }
 
 /**
@@ -99,3 +125,8 @@ export interface Package {
     dependencies: string[];
     path: string;
 }
+
+/**
+ * Output formats for CLI results.
+ */
+export type OutputFormat = 'console' | 'json';

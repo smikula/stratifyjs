@@ -1,5 +1,5 @@
 import type {
-    LayerConfig,
+    StratifyConfig,
     LayerDefinition,
     LayerMap,
     EnforcementConfig,
@@ -8,14 +8,15 @@ import type {
 import type { ConfigError } from './errors.js';
 import type { Result } from './result.js';
 import { ok, err } from './result.js';
+import { VALID_ENFORCEMENT_MODES } from './constants.js';
 
 /**
- * Validate that a raw parsed object conforms to the LayerConfig schema.
+ * Validate that a raw parsed object conforms to the StratifyConfig schema.
  *
  * @param raw - The raw parsed JSON object to validate
- * @returns A Result containing the validated LayerConfig, or a ConfigError with details of all validation issues
+ * @returns A Result containing the validated StratifyConfig, or a ConfigError with details of all validation issues
  */
-export function validateConfigSchema(raw: unknown): Result<LayerConfig, ConfigError> {
+export function validateConfigSchema(raw: unknown): Result<StratifyConfig, ConfigError> {
     if (typeof raw !== 'object' || raw === null) {
         return err({ type: 'config-validation-error', message: 'Config must be a JSON object' });
     }
@@ -62,11 +63,11 @@ export function validateConfigSchema(raw: unknown): Result<LayerConfig, ConfigEr
         if (
             enforcement.mode !== undefined &&
             (typeof enforcement.mode !== 'string' ||
-                !['error', 'warn', 'off'].includes(enforcement.mode))
+                !(VALID_ENFORCEMENT_MODES as readonly string[]).includes(enforcement.mode))
         ) {
             return err({
                 type: 'config-validation-error',
-                message: `Invalid enforcement mode: "${enforcement.mode}". Must be "error", "warn", or "off"`,
+                message: `Invalid enforcement mode: "${enforcement.mode}". Must be ${VALID_ENFORCEMENT_MODES.map(m => `"${m}"`).join(', ')}`,
             });
         }
     }
@@ -88,6 +89,26 @@ export function validateConfigSchema(raw: unknown): Result<LayerConfig, ConfigEr
             return err({
                 type: 'config-validation-error',
                 message: '"workspaces.patterns" must be an array of strings',
+            });
+        }
+        if (
+            workspaces.protocols !== undefined &&
+            (!Array.isArray(workspaces.protocols) ||
+                !workspaces.protocols.every((p: unknown) => typeof p === 'string'))
+        ) {
+            return err({
+                type: 'config-validation-error',
+                message: '"workspaces.protocols" must be an array of strings',
+            });
+        }
+        if (
+            workspaces.ignore !== undefined &&
+            (!Array.isArray(workspaces.ignore) ||
+                !workspaces.ignore.every((p: unknown) => typeof p === 'string'))
+        ) {
+            return err({
+                type: 'config-validation-error',
+                message: '"workspaces.ignore" must be an array of strings',
             });
         }
     }

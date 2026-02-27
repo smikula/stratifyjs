@@ -37,7 +37,7 @@ describe('validateLayers', () => {
         }
     });
 
-    it('works with a pre-built config (skips file loading)', async () => {
+    it('works with a pre-built config (skips file loading, applies defaults)', async () => {
         const result = await validateLayers({
             workspaceRoot: MONOREPO_DIR,
             config: {
@@ -46,14 +46,30 @@ describe('validateLayers', () => {
                     core: { allowedDependencies: ['infra'] },
                     infra: { allowedDependencies: [] },
                 },
-                enforcement: { mode: 'warn' },
-                workspaces: { patterns: ['packages/*'] },
             },
         });
 
         expect(result.totalPackages).toBe(4);
         expect(result.violations).toHaveLength(1);
         expect(result.violations[0].package).toBe('@sample/bad-pkg');
+    });
+
+    it('applies defaults for omitted workspaces fields when config is provided programmatically', async () => {
+        const result = await validateLayers({
+            workspaceRoot: MONOREPO_DIR,
+            config: {
+                layers: {
+                    ui: { allowedDependencies: ['core'] },
+                    core: { allowedDependencies: ['infra'] },
+                    infra: { allowedDependencies: [] },
+                },
+                workspaces: { patterns: ['packages/*'] },
+            },
+        });
+
+        // protocols and ignore should have gotten defaults
+        expect(result.totalPackages).toBe(4);
+        expect(result.violations).toHaveLength(1);
     });
 
     it('returns zero violations when all dependencies are allowed via wildcard', async () => {
@@ -66,7 +82,11 @@ describe('validateLayers', () => {
                     infra: { allowedDependencies: [] },
                 },
                 enforcement: { mode: 'error' },
-                workspaces: { patterns: ['packages/*'] },
+                workspaces: {
+                    patterns: ['packages/*'],
+                    protocols: ['workspace:'],
+                    ignore: ['**/node_modules/**', '**/lib/**', '**/dist/**'],
+                },
             },
         });
 
@@ -102,7 +122,11 @@ describe('validateLayers', () => {
                     infra: { allowedDependencies: [] },
                 },
                 enforcement: { mode: 'warn' },
-                workspaces: { patterns: ['packages/*'] },
+                workspaces: {
+                    patterns: ['packages/*'],
+                    protocols: ['workspace:'],
+                    ignore: ['**/node_modules/**', '**/lib/**', '**/dist/**'],
+                },
             },
         });
 
@@ -119,7 +143,11 @@ describe('validateLayers', () => {
                     infra: { allowedDependencies: [] },
                 },
                 enforcement: { mode: 'off' },
-                workspaces: { patterns: ['packages/*'] },
+                workspaces: {
+                    patterns: ['packages/*'],
+                    protocols: ['workspace:'],
+                    ignore: ['**/node_modules/**', '**/lib/**', '**/dist/**'],
+                },
             },
         });
 
@@ -151,7 +179,11 @@ describe('validateLayers', () => {
                     infra: { allowedDependencies: [] },
                 },
                 enforcement: { mode: 'error' },
-                workspaces: { patterns: ['packages/*'] },
+                workspaces: {
+                    patterns: ['packages/*'],
+                    protocols: ['workspace:'],
+                    ignore: ['**/node_modules/**', '**/lib/**', '**/dist/**'],
+                },
             },
             mode: 'warn',
         });

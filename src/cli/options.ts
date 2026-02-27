@@ -1,5 +1,7 @@
 import type { ValidateLayersOptions } from '../api/api.js';
-import { StratifyConfig } from '../api/index.js';
+import type { StratifyConfig } from '../api/index.js';
+import type { EnforcementMode, OutputFormat } from '../types/types.js';
+import { DEFAULT_CONFIG_FILENAME, DEFAULT_OUTPUT_FORMAT } from '../core/constants.js';
 
 /**
  * Parsed CLI options.
@@ -7,8 +9,8 @@ import { StratifyConfig } from '../api/index.js';
 export interface CliOptions {
     config: string;
     root: string;
-    mode?: 'error' | 'warn' | 'off';
-    format: 'console' | 'json';
+    mode?: EnforcementMode;
+    format: OutputFormat;
 }
 
 /**
@@ -16,10 +18,10 @@ export interface CliOptions {
  */
 export function parseCliOptions(raw: Record<string, unknown>): CliOptions {
     return {
-        config: (raw.config as string) ?? 'stratify.config.json',
+        config: (raw.config as string) ?? DEFAULT_CONFIG_FILENAME,
         root: (raw.root as string) ?? process.cwd(),
         mode: raw.mode as CliOptions['mode'],
-        format: (raw.format as CliOptions['format']) ?? 'console',
+        format: (raw.format as CliOptions['format']) ?? DEFAULT_OUTPUT_FORMAT,
     };
 }
 

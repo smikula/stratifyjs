@@ -1,4 +1,5 @@
 import type { Package, LayerMap } from '../types/types.js';
+import { WILDCARD_LAYER } from './constants.js';
 
 /**
  * Check whether a package has the required "layer" field.
@@ -35,7 +36,7 @@ export function isDependencyAllowed(
     toLayer: string,
     allowedDependencies: ReadonlySet<string>
 ): boolean {
-    return allowedDependencies.has('*') || allowedDependencies.has(toLayer);
+    return allowedDependencies.has(WILDCARD_LAYER) || allowedDependencies.has(toLayer);
 }
 
 /**

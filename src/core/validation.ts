@@ -1,4 +1,4 @@
-import type { Package, StratifyConfig, Violation } from '../types/types.js';
+import type { Package, StratifyResolvedConfig, Violation } from '../types/types.js';
 import {
     hasRequiredLayer,
     isKnownLayer,
@@ -16,7 +16,7 @@ import {
  */
 export function validatePackages(
     packages: Package[],
-    config: StratifyConfig,
+    config: StratifyResolvedConfig,
     allowedPackagesByLayer: Map<string, Set<string>> = new Map()
 ): Violation[] {
     const violations: Violation[] = [];

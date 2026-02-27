@@ -1,10 +1,17 @@
 import { resolve } from 'path';
-import type { StratifyConfig, Violation } from '../types/types.js';
-import { StratifyError } from '../core/errors.js';
-import { validatePackages } from '../core/validation.js';
+import { loadAllowedPackages } from '../adapters/allowlist-file-loader.js';
 import { loadConfigFromFile } from '../adapters/config-file-loader.js';
 import { discoverPackages } from '../adapters/file-system-discovery.js';
-import { loadAllowedPackages } from '../adapters/allowlist-file-loader.js';
+import { applyDefaults } from '../core/config-defaults.js';
+import { DEFAULT_CONFIG_FILENAME } from '../core/constants.js';
+import { StratifyError } from '../core/errors.js';
+import { validatePackages } from '../core/validation.js';
+import type {
+    StratifyConfig,
+    StratifyResolvedConfig,
+    Violation,
+    EnforcementMode,
+} from '../types/types.js';
 
 /**
  * Options for the validateLayers API.
@@ -17,7 +24,7 @@ export interface ValidateLayersOptions {
     /** Provide a pre-built config directly, skipping file loading. */
     config?: StratifyConfig;
     /** Override the enforcement mode from config. */
-    mode?: 'error' | 'warn' | 'off';
+    mode?: EnforcementMode;
 }
 
 /**
@@ -60,11 +67,11 @@ export async function validateLayers(
     const workspaceRoot = resolve(options.workspaceRoot ?? process.cwd());
 
     // Resolve config
-    let config: StratifyConfig;
+    let config: StratifyResolvedConfig;
     if (options.config) {
-        config = options.config;
+        config = applyDefaults(options.config);
     } else {
-        const configPath = options.configPath ?? 'stratify.config.json';
+        const configPath = options.configPath ?? DEFAULT_CONFIG_FILENAME;
         const configResult = await loadConfigFromFile(workspaceRoot, configPath);
         if (!configResult.success) {
             throw new StratifyError(configResult.error);
@@ -115,7 +122,7 @@ export async function validateLayers(
  * @throws {StratifyError} If loading any allowed-packages file fails.
  */
 async function resolveAllowedPackages(
-    config: StratifyConfig,
+    config: StratifyResolvedConfig,
     workspaceRoot: string
 ): Promise<Map<string, Set<string>>> {
     const map = new Map<string, Set<string>>();

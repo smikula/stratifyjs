@@ -1,10 +1,11 @@
 import { applyDefaults, DEFAULT_ENFORCEMENT, DEFAULT_WORKSPACES } from '../config-defaults.js';
-import type { LayerConfig } from '../../types/types.js';
+import type { StratifyConfig } from '../../types/types.js';
+import { DEFAULT_PATTERNS, DEFAULT_PROTOCOLS, DEFAULT_IGNORE } from '../constants.js';
 
 describe('applyDefaults', () => {
     // ── Minimal config (all defaults applied) ──────────────────────────
     it('applies default enforcement and workspaces when not specified', () => {
-        const config: LayerConfig = {
+        const config: StratifyConfig = {
             layers: {
                 core: { allowedDependencies: [] },
             },
@@ -20,12 +21,14 @@ describe('applyDefaults', () => {
         expect(resolved.enforcement.mode).toBe('warn');
         // Workspaces defaults to ['packages/**/*']
         expect(resolved.workspaces).toEqual(DEFAULT_WORKSPACES);
-        expect(resolved.workspaces.patterns).toEqual(['packages/**/*']);
+        expect(resolved.workspaces.patterns).toEqual(DEFAULT_PATTERNS);
+        expect(resolved.workspaces.protocols).toEqual(DEFAULT_PROTOCOLS);
+        expect(resolved.workspaces.ignore).toEqual(DEFAULT_IGNORE);
     });
 
     // ── Override enforcement only ──────────────────────────────────────
     it('uses provided enforcement mode', () => {
-        const config: LayerConfig = {
+        const config: StratifyConfig = {
             layers: { core: { allowedDependencies: [] } },
             enforcement: { mode: 'error' },
         };
@@ -34,12 +37,14 @@ describe('applyDefaults', () => {
 
         expect(resolved.enforcement.mode).toBe('error');
         // workspaces should still get defaults
-        expect(resolved.workspaces.patterns).toEqual(['packages/**/*']);
+        expect(resolved.workspaces.patterns).toEqual(DEFAULT_PATTERNS);
+        expect(resolved.workspaces.protocols).toEqual(DEFAULT_PROTOCOLS);
+        expect(resolved.workspaces.ignore).toEqual(DEFAULT_IGNORE);
     });
 
     // ── Override workspaces only ───────────────────────────────────────
     it('uses provided workspaces patterns', () => {
-        const config: LayerConfig = {
+        const config: StratifyConfig = {
             layers: { core: { allowedDependencies: [] } },
             workspaces: { patterns: ['apps/*', 'libs/*'] },
         };
@@ -47,21 +52,53 @@ describe('applyDefaults', () => {
         const resolved = applyDefaults(config);
 
         expect(resolved.workspaces.patterns).toEqual(['apps/*', 'libs/*']);
+        expect(resolved.workspaces.protocols).toEqual(DEFAULT_PROTOCOLS);
+        expect(resolved.workspaces.ignore).toEqual(DEFAULT_IGNORE);
         // enforcement should still get defaults
         expect(resolved.enforcement.mode).toBe('warn');
     });
 
     // ── Override both ──────────────────────────────────────────────────
-    it('uses both overrides when provided', () => {
-        const config: LayerConfig = {
+    it('uses overrides when provided', () => {
+        const config: StratifyConfig = {
             layers: { core: { allowedDependencies: [] } },
             enforcement: { mode: 'off' },
-            workspaces: { patterns: ['modules/*'] },
+            workspaces: { patterns: ['modules/*'], protocols: ['workspace:'] },
         };
 
         const resolved = applyDefaults(config);
 
         expect(resolved.enforcement.mode).toBe('off');
         expect(resolved.workspaces.patterns).toEqual(['modules/*']);
+        expect(resolved.workspaces.protocols).toEqual(['workspace:']);
+        expect(resolved.workspaces.ignore).toEqual(DEFAULT_IGNORE);
+    });
+
+    it('uses provided workspaces protocols', () => {
+        const config: StratifyConfig = {
+            layers: { core: { allowedDependencies: [] } },
+            workspaces: { patterns: ['packages/*'], protocols: ['workspace:', 'link:'] },
+        };
+
+        const resolved = applyDefaults(config);
+
+        expect(resolved.workspaces.protocols).toEqual(['workspace:', 'link:']);
+        expect(resolved.workspaces.patterns).toEqual(['packages/*']);
+        expect(resolved.workspaces.ignore).toEqual(DEFAULT_IGNORE);
+    });
+
+    it('uses provided workspaces ignore', () => {
+        const config: StratifyConfig = {
+            layers: { core: { allowedDependencies: [] } },
+            workspaces: {
+                patterns: ['packages/*'],
+                ignore: ['**/node_modules/**', '**/build/**'],
+            },
+        };
+
+        const resolved = applyDefaults(config);
+
+        expect(resolved.workspaces.ignore).toEqual(['**/node_modules/**', '**/build/**']);
+        expect(resolved.workspaces.patterns).toEqual(['packages/*']);
     });
 });

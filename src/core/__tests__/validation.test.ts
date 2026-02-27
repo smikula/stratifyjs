@@ -1,9 +1,9 @@
 import { validatePackages } from '../validation.js';
 import { createTestConfig, createTestPackage } from '../../__tests__/fixtures/helpers.js';
-import type { Package, StratifyConfig } from '../../types/types.js';
+import type { Package, StratifyResolvedConfig } from '../../types/types.js';
 
 describe('validatePackages', () => {
-    let config: StratifyConfig;
+    let config: StratifyResolvedConfig;
 
     beforeEach(() => {
         config = createTestConfig();

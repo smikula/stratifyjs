@@ -1,22 +1,30 @@
 import type {
-    LayerConfig,
     StratifyConfig,
+    StratifyResolvedConfig,
     EnforcementConfig,
     WorkspaceConfig,
 } from '../types/types.js';
+import {
+    DEFAULT_PATTERNS,
+    DEFAULT_PROTOCOLS,
+    DEFAULT_IGNORE,
+    DEFAULT_ENFORCEMENT_MODE,
+} from './constants.js';
 
 export const DEFAULT_ENFORCEMENT: EnforcementConfig = {
-    mode: 'warn',
+    mode: DEFAULT_ENFORCEMENT_MODE,
 };
 
 export const DEFAULT_WORKSPACES: WorkspaceConfig = {
-    patterns: ['packages/**/*'],
+    patterns: DEFAULT_PATTERNS,
+    protocols: DEFAULT_PROTOCOLS,
+    ignore: DEFAULT_IGNORE,
 };
 
 /**
- * Apply defaults to a validated LayerConfig, producing a fully resolved config.
+ * Apply defaults to a validated StratifyConfig, producing a fully resolved config.
  */
-export function applyDefaults(config: LayerConfig): StratifyConfig {
+export function applyDefaults(config: StratifyConfig): StratifyResolvedConfig {
     return {
         layers: config.layers,
         enforcement: {

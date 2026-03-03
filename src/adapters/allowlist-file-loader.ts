@@ -1,4 +1,4 @@
-import { readFile, access } from 'fs/promises';
+import { readFile } from 'fs/promises';
 import { resolve } from 'path';
 import type { ConfigError } from '../core/errors.js';
 import type { Result } from '../core/result.js';

@@ -1,6 +1,6 @@
 import { readFile } from 'fs/promises';
 import { resolve } from 'path';
-import type { StratifyConfig } from '../types/types.js';
+import type { StratifyResolvedConfig } from '../types/types.js';
 import type { ConfigError } from '../core/errors.js';
 import type { Result } from '../core/result.js';
 import { ok, err } from '../core/result.js';
@@ -14,7 +14,7 @@ import { applyDefaults } from '../core/config-defaults.js';
 export async function loadConfigFromFile(
     workspaceRoot: string,
     configPath: string
-): Promise<Result<StratifyConfig, ConfigError>> {
+): Promise<Result<StratifyResolvedConfig, ConfigError>> {
     const fullPath = resolve(workspaceRoot, configPath);
 
     // Read file content

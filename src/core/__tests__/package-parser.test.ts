@@ -1,4 +1,5 @@
-import { parsePackageJson, extractWorkspaceDependencies } from '../package-parser.js';
+import { parsePackageJson, extractInternalDependencies } from '../package-parser.js';
+import { DEFAULT_PROTOCOLS } from '../constants.js';
 
 describe('parsePackageJson', () => {
     it('parses a valid package.json with layer and workspace deps', () => {
@@ -15,7 +16,7 @@ describe('parsePackageJson', () => {
             },
         };
 
-        const result = parsePackageJson(content, 'packages/ui');
+        const result = parsePackageJson(content, 'packages/ui', DEFAULT_PROTOCOLS);
 
         expect(result.success).toBe(true);
         if (result.success) {
@@ -32,7 +33,7 @@ describe('parsePackageJson', () => {
     it('parses a package without a layer (layer is optional)', () => {
         const content = { name: '@my/utils', version: '1.0.0' };
 
-        const result = parsePackageJson(content, 'packages/utils');
+        const result = parsePackageJson(content, 'packages/utils', DEFAULT_PROTOCOLS);
 
         expect(result.success).toBe(true);
         if (result.success) {
@@ -41,7 +42,7 @@ describe('parsePackageJson', () => {
     });
 
     it('returns error for non-object content', () => {
-        const result = parsePackageJson('string', 'packages/bad');
+        const result = parsePackageJson('string', 'packages/bad', DEFAULT_PROTOCOLS);
 
         expect(result.success).toBe(false);
         if (!result.success) {
@@ -51,12 +52,16 @@ describe('parsePackageJson', () => {
     });
 
     it('returns error for null content', () => {
-        const result = parsePackageJson(null, 'packages/bad');
+        const result = parsePackageJson(null, 'packages/bad', DEFAULT_PROTOCOLS);
         expect(result.success).toBe(false);
     });
 
     it('returns error when name is missing', () => {
-        const result = parsePackageJson({ version: '1.0.0' }, 'packages/no-name');
+        const result = parsePackageJson(
+            { version: '1.0.0' },
+            'packages/no-name',
+            DEFAULT_PROTOCOLS
+        );
 
         expect(result.success).toBe(false);
         if (!result.success) {
@@ -66,33 +71,51 @@ describe('parsePackageJson', () => {
     });
 
     it('returns error when name is empty string', () => {
-        const result = parsePackageJson({ name: '' }, 'packages/empty-name');
+        const result = parsePackageJson({ name: '' }, 'packages/empty-name', DEFAULT_PROTOCOLS);
 
         expect(result.success).toBe(false);
         if (!result.success) {
             expect(result.error.type).toBe('package-parse-error');
         }
     });
+
+    it('uses custom protocols when provided', () => {
+        const content = {
+            name: '@my/app',
+            layer: 'app',
+            dependencies: {
+                '@my/core': 'link:../core',
+                react: '^18.0.0',
+            },
+        };
+
+        const result = parsePackageJson(content, 'packages/app', ['link:']);
+
+        expect(result.success).toBe(true);
+        if (result.success) {
+            expect(result.value.dependencies).toEqual(['@my/core']);
+        }
+    });
 });
 
-describe('extractWorkspaceDependencies', () => {
+describe('extractInternalDependencies', () => {
     it('extracts only workspace: protocol dependencies', () => {
-        const deps = extractWorkspaceDependencies(
+        const deps = extractInternalDependencies(
+            DEFAULT_PROTOCOLS,
             { '@my/core': 'workspace:*', react: '^18.0.0' },
             undefined,
             undefined
         );
-
         expect(deps).toEqual(['@my/core']);
     });
 
     it('extracts from devDependencies and peerDependencies too', () => {
-        const deps = extractWorkspaceDependencies(
+        const deps = extractInternalDependencies(
+            DEFAULT_PROTOCOLS,
             { '@my/core': 'workspace:*' },
             { '@my/test': 'workspace:^' },
             { '@my/shared': 'workspace:~' }
         );
-
         expect(deps).toHaveLength(3);
         expect(deps).toContain('@my/core');
         expect(deps).toContain('@my/test');
@@ -100,17 +123,60 @@ describe('extractWorkspaceDependencies', () => {
     });
 
     it('returns empty array when no workspace deps exist', () => {
-        const deps = extractWorkspaceDependencies(
+        const deps = extractInternalDependencies(
+            DEFAULT_PROTOCOLS,
             { react: '^18.0.0', lodash: '^4.0.0' },
             undefined,
             undefined
         );
-
         expect(deps).toEqual([]);
     });
 
     it('handles undefined deps objects', () => {
-        const deps = extractWorkspaceDependencies(undefined, undefined, undefined);
+        const deps = extractInternalDependencies(
+            DEFAULT_PROTOCOLS,
+            undefined,
+            undefined,
+            undefined
+        );
         expect(deps).toEqual([]);
+    });
+
+    it('matches link: and portal: when configured', () => {
+        const deps = extractInternalDependencies(
+            ['workspace:', 'link:', 'portal:'],
+            {
+                '@my/core': 'workspace:*',
+                '@my/utils': 'link:../utils',
+                '@my/shared': 'portal:../shared',
+                react: '^18.0.0',
+            },
+            undefined,
+            undefined
+        );
+        expect(deps).toHaveLength(3);
+        expect(deps).toContain('@my/core');
+        expect(deps).toContain('@my/utils');
+        expect(deps).toContain('@my/shared');
+    });
+
+    it('matches file: when configured', () => {
+        const deps = extractInternalDependencies(
+            ['file:'],
+            { '@my/local': 'file:../local-pkg', lodash: '^4.0.0' },
+            undefined,
+            undefined
+        );
+        expect(deps).toEqual(['@my/local']);
+    });
+
+    it('ignores protocols not in the list', () => {
+        const deps = extractInternalDependencies(
+            ['workspace:'],
+            { '@my/linked': 'link:../linked', '@my/core': 'workspace:*' },
+            undefined,
+            undefined
+        );
+        expect(deps).toEqual(['@my/core']);
     });
 });

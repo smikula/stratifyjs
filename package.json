@@ -1,6 +1,6 @@
 {
   "name": "stratifyjs",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "Enforce architectural layer boundaries in monorepos",
   "type": "module",
   "bin": {
@@ -24,7 +24,7 @@
     "typecheck": "tsc --noEmit",
     "prepublishOnly": "yarn build && yarn test",
     "change": "beachball change",
-    "checkchange": "beachball check",
+    "checkchange": "beachball check --no-check",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
   },

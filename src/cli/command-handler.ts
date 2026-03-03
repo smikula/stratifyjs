@@ -2,8 +2,7 @@ import { resolve } from 'path';
 import { loadConfigFromFile } from '../adapters/config-file-loader.js';
 import { validateLayers } from '../api/api.js';
 import { StratifyError } from '../core/errors.js';
-import type { CliOptions } from './options.js';
-import { toLibraryOptions } from './options.js';
+import { toLibraryOptions, type CliOptions } from './options.js';
 import { logInfo, logSuccess, logError, logGray, logPlain } from './output-helpers.js';
 
 /**

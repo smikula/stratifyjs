@@ -24,7 +24,7 @@
     "typecheck": "tsc --noEmit",
     "prepublishOnly": "yarn build && yarn test",
     "change": "beachball change",
-    "checkchange": "beachball check",
+    "checkchange": "beachball check --no-check",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
   },

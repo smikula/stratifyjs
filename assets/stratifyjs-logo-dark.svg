@@ -1,0 +1,11 @@
+<svg width="800" height="800" viewBox="0 0 800 800" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Stacked layers icon, scaled 8× and centered -->
+  <g transform="translate(144, 92) scale(8)">
+    <rect x="18" y="14" width="28" height="5" rx="0.5" fill="#ffffff"/>
+    <rect x="15" y="26" width="28" height="5" rx="0.5" fill="#ffffff"/>
+    <rect x="12" y="38" width="28" height="5" rx="0.5" fill="#ffffff"/>
+    <path d="M48 12 L52 12 L52 45 L48 45" stroke="#ffffff" stroke-width="2.5" stroke-linecap="square" fill="none"/>
+  </g>
+  <!-- Text centered below the icon -->
+  <text x="400" y="556" fill="#ffffff" font-family="system-ui, -apple-system, sans-serif" font-size="56" font-weight="700" letter-spacing="-0.5" text-anchor="middle">STRATIFYJS</text>
+</svg>

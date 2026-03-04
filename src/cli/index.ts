@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import pc from 'picocolors';
 import { program } from 'commander';
 import { createRequire } from 'module';
 import { parseCliOptions } from './options.js';
@@ -7,10 +8,12 @@ import { DEFAULT_CONFIG_FILENAME, DEFAULT_OUTPUT_FORMAT } from '../core/constant
 
 const require = createRequire(import.meta.url);
 const { version } = require('../../package.json') as { version: string };
+const banner = `${pc.bold(pc.blue('Stratify'))} ${pc.gray(`v${version}`)}`;
 
 program
     .name('stratifyjs')
     .description('Enforce package layering rules in monorepos')
+    .addHelpText('before', banner + '\n')
     .version(version)
     .option('-c, --config <path>', 'Path to layer config file', DEFAULT_CONFIG_FILENAME)
     .option('-r, --root <path>', 'Workspace root directory', process.cwd())

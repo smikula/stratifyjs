@@ -1,3 +1,18 @@
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/smikula/stratifyjs/master/assets/stratifyjs-logo-dark.svg" />
+    <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/smikula/stratifyjs/master/assets/stratifyjs-logo.svg" />
+    <!-- PNG fallback for renderers that don't support <picture> (e.g. npmjs.com) -->
+    <img src="https://raw.githubusercontent.com/smikula/stratifyjs/master/assets/stratifyjs-logo.png" alt="Stratify logo" width="200" />
+  </picture>
+</p>
+
+<p align="center">
+  <a href="https://www.npmjs.com/package/stratifyjs"><img src="https://img.shields.io/npm/v/stratifyjs" alt="npm version" /></a>
+  <a href="https://github.com/smikula/stratifyjs/blob/master/LICENSE"><img src="https://img.shields.io/npm/l/stratifyjs" alt="license" /></a>
+  <a href="https://www.npmjs.com/package/stratifyjs"><img src="https://img.shields.io/npm/dm/stratifyjs" alt="downloads" /></a>
+</p>
+
 # Stratify
 
 Enforce architectural layer boundaries in monorepos. Catches invalid cross-layer dependencies at build time by analyzing internal dependency protocols (e.g. `workspace:`, `link:`, `file:`) in `package.json` files.

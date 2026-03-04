@@ -20,3 +20,6 @@ jest.config.mjs
 # Documentation and lock files
 ARCHITECTURE.md
 yarn.lock
+
+# Assets (images served via GitHub raw CDN, not needed in package)
+assets/

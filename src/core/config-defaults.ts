@@ -8,6 +8,7 @@ import {
     DEFAULT_PATTERNS,
     DEFAULT_PROTOCOLS,
     DEFAULT_IGNORE,
+    DEFAULT_DEPENDENCY_TYPES,
     DEFAULT_ENFORCEMENT_MODE,
 } from './constants.js';
 
@@ -19,6 +20,7 @@ export const DEFAULT_WORKSPACES: WorkspaceConfig = {
     patterns: DEFAULT_PATTERNS,
     protocols: DEFAULT_PROTOCOLS,
     ignore: DEFAULT_IGNORE,
+    dependencyTypes: DEFAULT_DEPENDENCY_TYPES,
 };
 
 /**

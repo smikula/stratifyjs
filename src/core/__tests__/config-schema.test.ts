@@ -218,6 +218,75 @@ describe('validateConfigSchema', () => {
             expect(result.error.message).toContain('array of strings');
         }
     });
+
+    // ── workspaces.dependencyTypes ─────────────────────────────────────
+
+    it('returns ok for valid workspaces.dependencyTypes', () => {
+        const config = {
+            layers: { core: { allowedDependencies: [] } },
+            workspaces: { dependencyTypes: ['dependencies', 'devDependencies'] },
+        };
+        const result = validateConfigSchema(config);
+        expect(result.success).toBe(true);
+    });
+
+    it('returns ok for config without dependencyTypes (uses default)', () => {
+        const config = {
+            layers: { core: { allowedDependencies: [] } },
+            workspaces: { patterns: ['packages/*'] },
+        };
+        const result = validateConfigSchema(config);
+        expect(result.success).toBe(true);
+    });
+
+    it('returns error for workspaces.dependencyTypes that is not an array', () => {
+        const config = {
+            layers: { core: { allowedDependencies: [] } },
+            workspaces: { dependencyTypes: 'dependencies' },
+        };
+        const result = validateConfigSchema(config);
+        expect(result.success).toBe(false);
+        if (!result.success) {
+            expect(result.error.message).toContain('non-empty array of strings');
+        }
+    });
+
+    it('returns error for workspaces.dependencyTypes that is an empty array', () => {
+        const config = {
+            layers: { core: { allowedDependencies: [] } },
+            workspaces: { dependencyTypes: [] },
+        };
+        const result = validateConfigSchema(config);
+        expect(result.success).toBe(false);
+        if (!result.success) {
+            expect(result.error.message).toContain('non-empty array of strings');
+        }
+    });
+
+    it('returns error for workspaces.dependencyTypes with non-string elements', () => {
+        const config = {
+            layers: { core: { allowedDependencies: [] } },
+            workspaces: { dependencyTypes: [123] },
+        };
+        const result = validateConfigSchema(config);
+        expect(result.success).toBe(false);
+        if (!result.success) {
+            expect(result.error.message).toContain('non-empty array of strings');
+        }
+    });
+
+    it('returns error for workspaces.dependencyTypes with invalid values', () => {
+        const config = {
+            layers: { core: { allowedDependencies: [] } },
+            workspaces: { dependencyTypes: ['dependencies', 'optionalDependencies'] },
+        };
+        const result = validateConfigSchema(config);
+        expect(result.success).toBe(false);
+        if (!result.success) {
+            expect(result.error.message).toContain('optionalDependencies');
+            expect(result.error.message).toContain('Invalid dependency type');
+        }
+    });
 });
 
 describe('validateLayerDefinition', () => {

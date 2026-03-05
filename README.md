@@ -3,7 +3,7 @@
     <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/smikula/stratifyjs/master/assets/stratifyjs-logo-dark.svg" />
     <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/smikula/stratifyjs/master/assets/stratifyjs-logo.svg" />
     <!-- PNG fallback for renderers that don't support <picture> (e.g. npmjs.com) -->
-    <img src="https://raw.githubusercontent.com/smikula/stratifyjs/master/assets/stratifyjs-logo.png" alt="Stratify logo" width="200" />
+    <img src="https://raw.githubusercontent.com/smikula/stratifyjs/master/assets/stratifyjs-logo.png" alt="Stratify logo" width="300" />
   </picture>
 </p>
 

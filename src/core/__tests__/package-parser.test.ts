@@ -1,5 +1,5 @@
 import { parsePackageJson, extractInternalDependencies } from '../package-parser.js';
-import { DEFAULT_PROTOCOLS } from '../constants.js';
+import { DEFAULT_PROTOCOLS, DEFAULT_DEPENDENCY_TYPES } from '../constants.js';
 
 describe('parsePackageJson', () => {
     it('parses a valid package.json with layer and workspace deps', () => {
@@ -16,14 +16,46 @@ describe('parsePackageJson', () => {
             },
         };
 
-        const result = parsePackageJson(content, 'packages/ui', DEFAULT_PROTOCOLS);
+        const result = parsePackageJson(
+            content,
+            'packages/ui',
+            DEFAULT_PROTOCOLS,
+            DEFAULT_DEPENDENCY_TYPES
+        );
 
         expect(result.success).toBe(true);
         if (result.success) {
             expect(result.value.name).toBe('@my/ui');
             expect(result.value.layer).toBe('ui');
             expect(result.value.path).toBe('packages/ui');
-            // Only workspace: deps should be extracted
+            // Default dependencyTypes is ['dependencies'] — only production deps extracted
+            expect(result.value.dependencies).toContain('@my/core');
+            expect(result.value.dependencies).not.toContain('@my/test-utils');
+            expect(result.value.dependencies).not.toContain('react');
+        }
+    });
+
+    it('includes devDependencies when dependencyTypes includes it', () => {
+        const content = {
+            name: '@my/ui',
+            version: '1.0.0',
+            layer: 'ui',
+            dependencies: {
+                '@my/core': 'workspace:*',
+                react: '^18.0.0',
+            },
+            devDependencies: {
+                '@my/test-utils': 'workspace:^',
+            },
+        };
+
+        const result = parsePackageJson(content, 'packages/ui', DEFAULT_PROTOCOLS, [
+            'dependencies',
+            'devDependencies',
+        ]);
+
+        expect(result.success).toBe(true);
+        if (result.success) {
             expect(result.value.dependencies).toContain('@my/core');
             expect(result.value.dependencies).toContain('@my/test-utils');
             expect(result.value.dependencies).not.toContain('react');
@@ -33,7 +65,12 @@ describe('parsePackageJson', () => {
     it('parses a package without a layer (layer is optional)', () => {
         const content = { name: '@my/utils', version: '1.0.0' };
 
-        const result = parsePackageJson(content, 'packages/utils', DEFAULT_PROTOCOLS);
+        const result = parsePackageJson(
+            content,
+            'packages/utils',
+            DEFAULT_PROTOCOLS,
+            DEFAULT_DEPENDENCY_TYPES
+        );
 
         expect(result.success).toBe(true);
         if (result.success) {
@@ -42,7 +79,12 @@ describe('parsePackageJson', () => {
     });
 
     it('returns error for non-object content', () => {
-        const result = parsePackageJson('string', 'packages/bad', DEFAULT_PROTOCOLS);
+        const result = parsePackageJson(
+            'string',
+            'packages/bad',
+            DEFAULT_PROTOCOLS,
+            DEFAULT_DEPENDENCY_TYPES
+        );
 
         expect(result.success).toBe(false);
         if (!result.success) {
@@ -52,7 +94,12 @@ describe('parsePackageJson', () => {
     });
 
     it('returns error for null content', () => {
-        const result = parsePackageJson(null, 'packages/bad', DEFAULT_PROTOCOLS);
+        const result = parsePackageJson(
+            null,
+            'packages/bad',
+            DEFAULT_PROTOCOLS,
+            DEFAULT_DEPENDENCY_TYPES
+        );
         expect(result.success).toBe(false);
     });
 
@@ -60,7 +107,8 @@ describe('parsePackageJson', () => {
         const result = parsePackageJson(
             { version: '1.0.0' },
             'packages/no-name',
-            DEFAULT_PROTOCOLS
+            DEFAULT_PROTOCOLS,
+            DEFAULT_DEPENDENCY_TYPES
         );
 
         expect(result.success).toBe(false);
@@ -71,7 +119,12 @@ describe('parsePackageJson', () => {
     });
 
     it('returns error when name is empty string', () => {
-        const result = parsePackageJson({ name: '' }, 'packages/empty-name', DEFAULT_PROTOCOLS);
+        const result = parsePackageJson(
+            { name: '' },
+            'packages/empty-name',
+            DEFAULT_PROTOCOLS,
+            DEFAULT_DEPENDENCY_TYPES
+        );
 
         expect(result.success).toBe(false);
         if (!result.success) {
@@ -89,7 +142,12 @@ describe('parsePackageJson', () => {
             },
         };
 
-        const result = parsePackageJson(content, 'packages/app', ['link:']);
+        const result = parsePackageJson(
+            content,
+            'packages/app',
+            ['link:'],
+            DEFAULT_DEPENDENCY_TYPES
+        );
 
         expect(result.success).toBe(true);
         if (result.success) {
@@ -99,22 +157,22 @@ describe('parsePackageJson', () => {
 });
 
 describe('extractInternalDependencies', () => {
-    it('extracts only workspace: protocol dependencies', () => {
-        const deps = extractInternalDependencies(
-            DEFAULT_PROTOCOLS,
-            { '@my/core': 'workspace:*', react: '^18.0.0' },
-            undefined,
-            undefined
-        );
+    it('extracts only workspace: protocol dependencies from dependencies field', () => {
+        const deps = extractInternalDependencies(DEFAULT_PROTOCOLS, DEFAULT_DEPENDENCY_TYPES, {
+            dependencies: { '@my/core': 'workspace:*', react: '^18.0.0' },
+        });
         expect(deps).toEqual(['@my/core']);
     });
 
-    it('extracts from devDependencies and peerDependencies too', () => {
+    it('extracts from all three fields when all dependencyTypes are specified', () => {
         const deps = extractInternalDependencies(
             DEFAULT_PROTOCOLS,
-            { '@my/core': 'workspace:*' },
-            { '@my/test': 'workspace:^' },
-            { '@my/shared': 'workspace:~' }
+            ['dependencies', 'devDependencies', 'peerDependencies'],
+            {
+                dependencies: { '@my/core': 'workspace:*' },
+                devDependencies: { '@my/test': 'workspace:^' },
+                peerDependencies: { '@my/shared': 'workspace:~' },
+            }
         );
         expect(deps).toHaveLength(3);
         expect(deps).toContain('@my/core');
@@ -122,22 +180,27 @@ describe('extractInternalDependencies', () => {
         expect(deps).toContain('@my/shared');
     });
 
+    it('ignores devDependencies when dependencyTypes is only ["dependencies"]', () => {
+        const deps = extractInternalDependencies(DEFAULT_PROTOCOLS, ['dependencies'], {
+            dependencies: { '@my/core': 'workspace:*' },
+            devDependencies: { '@my/test': 'workspace:^' },
+            peerDependencies: { '@my/shared': 'workspace:~' },
+        });
+        expect(deps).toEqual(['@my/core']);
+    });
+
     it('returns empty array when no workspace deps exist', () => {
-        const deps = extractInternalDependencies(
-            DEFAULT_PROTOCOLS,
-            { react: '^18.0.0', lodash: '^4.0.0' },
-            undefined,
-            undefined
-        );
+        const deps = extractInternalDependencies(DEFAULT_PROTOCOLS, DEFAULT_DEPENDENCY_TYPES, {
+            dependencies: { react: '^18.0.0', lodash: '^4.0.0' },
+        });
         expect(deps).toEqual([]);
     });
 
-    it('handles undefined deps objects', () => {
+    it('handles missing deps fields gracefully', () => {
         const deps = extractInternalDependencies(
             DEFAULT_PROTOCOLS,
-            undefined,
-            undefined,
-            undefined
+            ['dependencies', 'devDependencies', 'peerDependencies'],
+            {}
         );
         expect(deps).toEqual([]);
     });
@@ -145,14 +208,15 @@ describe('extractInternalDependencies', () => {
     it('matches link: and portal: when configured', () => {
         const deps = extractInternalDependencies(
             ['workspace:', 'link:', 'portal:'],
+            DEFAULT_DEPENDENCY_TYPES,
             {
-                '@my/core': 'workspace:*',
-                '@my/utils': 'link:../utils',
-                '@my/shared': 'portal:../shared',
-                react: '^18.0.0',
-            },
-            undefined,
-            undefined
+                dependencies: {
+                    '@my/core': 'workspace:*',
+                    '@my/utils': 'link:../utils',
+                    '@my/shared': 'portal:../shared',
+                    react: '^18.0.0',
+                },
+            }
         );
         expect(deps).toHaveLength(3);
         expect(deps).toContain('@my/core');
@@ -161,22 +225,16 @@ describe('extractInternalDependencies', () => {
     });
 
     it('matches file: when configured', () => {
-        const deps = extractInternalDependencies(
-            ['file:'],
-            { '@my/local': 'file:../local-pkg', lodash: '^4.0.0' },
-            undefined,
-            undefined
-        );
+        const deps = extractInternalDependencies(['file:'], DEFAULT_DEPENDENCY_TYPES, {
+            dependencies: { '@my/local': 'file:../local-pkg', lodash: '^4.0.0' },
+        });
         expect(deps).toEqual(['@my/local']);
     });
 
     it('ignores protocols not in the list', () => {
-        const deps = extractInternalDependencies(
-            ['workspace:'],
-            { '@my/linked': 'link:../linked', '@my/core': 'workspace:*' },
-            undefined,
-            undefined
-        );
+        const deps = extractInternalDependencies(['workspace:'], DEFAULT_DEPENDENCY_TYPES, {
+            dependencies: { '@my/linked': 'link:../linked', '@my/core': 'workspace:*' },
+        });
         expect(deps).toEqual(['@my/core']);
     });
 });

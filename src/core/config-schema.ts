@@ -8,7 +8,7 @@ import type {
 import type { ConfigError } from './errors.js';
 import type { Result } from './result.js';
 import { ok, err } from './result.js';
-import { VALID_ENFORCEMENT_MODES } from './constants.js';
+import { VALID_ENFORCEMENT_MODES, VALID_DEPENDENCY_TYPES } from './constants.js';
 
 /**
  * Validate that a raw parsed object conforms to the StratifyConfig schema.
@@ -110,6 +110,27 @@ export function validateConfigSchema(raw: unknown): Result<StratifyConfig, Confi
                 type: 'config-validation-error',
                 message: '"workspaces.ignore" must be an array of strings',
             });
+        }
+        if (workspaces.dependencyTypes !== undefined) {
+            if (
+                !Array.isArray(workspaces.dependencyTypes) ||
+                workspaces.dependencyTypes.length === 0 ||
+                !workspaces.dependencyTypes.every((t: unknown) => typeof t === 'string')
+            ) {
+                return err({
+                    type: 'config-validation-error',
+                    message: '"workspaces.dependencyTypes" must be a non-empty array of strings',
+                });
+            }
+            const invalid = (workspaces.dependencyTypes as string[]).filter(
+                t => !(VALID_DEPENDENCY_TYPES as readonly string[]).includes(t)
+            );
+            if (invalid.length > 0) {
+                return err({
+                    type: 'config-validation-error',
+                    message: `Invalid dependency type(s): ${invalid.map(t => `"${t}"`).join(', ')}. Valid values: ${VALID_DEPENDENCY_TYPES.map(t => `"${t}"`).join(', ')}`,
+                });
+            }
         }
     }
 

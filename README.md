@@ -3,7 +3,7 @@
     <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/smikula/stratifyjs/master/assets/stratifyjs-logo-dark.svg" />
     <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/smikula/stratifyjs/master/assets/stratifyjs-logo.svg" />
     <!-- PNG fallback for renderers that don't support <picture> (e.g. npmjs.com) -->
-    <img src="https://raw.githubusercontent.com/smikula/stratifyjs/master/assets/stratifyjs-logo.png" alt="Stratify logo" width="200" />
+    <img src="https://raw.githubusercontent.com/smikula/stratifyjs/master/assets/stratifyjs-logo.png" alt="Stratify logo" width="300" />
   </picture>
 </p>
 
@@ -265,16 +265,18 @@ Controls which packages are discovered and how internal dependencies are detecte
     "workspaces": {
         "patterns": ["packages/**/*", "shared/**/*"],
         "protocols": ["workspace:", "link:"],
-        "ignore": ["**/node_modules/**", "**/lib/**", "**/dist/**", "**/build/**"]
+        "ignore": ["**/node_modules/**", "**/lib/**", "**/dist/**", "**/build/**"],
+        "dependencyTypes": ["dependencies"]
     }
 }
 ```
 
-| Field       | Type       | Default                                                    | Description                                                                                               |
-| ----------- | ---------- | ---------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
-| `patterns`  | `string[]` | `["packages/**/*"]`                                        | Glob patterns to locate workspace packages (each must contain a `package.json`)                           |
-| `protocols` | `string[]` | `["workspace:"]`                                           | Version-string prefixes that identify internal dependencies. Common values: `"workspace:"`, `"link:"`, `"portal:"`, `"file:"` |
-| `ignore`    | `string[]` | `["**/node_modules/**", "**/lib/**", "**/dist/**"]`        | Glob patterns to exclude from package discovery                                                           |
+| Field              | Type       | Default                                                    | Description                                                                                               |
+| ------------------ | ---------- | ---------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| `patterns`         | `string[]` | `["packages/**/*"]`                                        | Glob patterns to locate workspace packages (each must contain a `package.json`)                           |
+| `protocols`        | `string[]` | `["workspace:"]`                                           | Version-string prefixes that identify internal dependencies. Common values: `"workspace:"`, `"link:"`, `"portal:"`, `"file:"` |
+| `ignore`           | `string[]` | `["**/node_modules/**", "**/lib/**", "**/dist/**"]`        | Glob patterns to exclude from package discovery                                                           |
+| `dependencyTypes`  | `string[]` | `["dependencies"]`                                         | Which `package.json` dependency fields to check. Valid values: `"dependencies"`, `"devDependencies"`, `"peerDependencies"` |
 
 ## Layer Definition Reference
 
@@ -294,11 +296,23 @@ Packages missing the `"layer"` field produce a `missing-layer` violation.
 
 ### Dependency Detection
 
-By default, only `workspace:` protocol dependencies are checked. You can configure additional protocols (e.g. `link:`, `portal:`, `file:`) via the `workspaces.protocols` config field. All three dependency fields are scanned:
+By default, only `workspace:` protocol dependencies are checked. You can configure additional protocols (e.g. `link:`, `portal:`, `file:`) via the `workspaces.protocols` config field.
 
--   `dependencies`
--   `devDependencies`
--   `peerDependencies`
+By default, only the `dependencies` field is scanned — this represents the true runtime/production boundary between packages. If you also want to enforce layer rules on build-time or test-time dependencies, add `"devDependencies"` and/or `"peerDependencies"` to `workspaces.dependencyTypes`:
+
+```json
+{
+    "workspaces": {
+        "dependencyTypes": ["dependencies", "devDependencies"]
+    }
+}
+```
+
+| Value                | Meaning                                                       |
+| -------------------- | ------------------------------------------------------------- |
+| `"dependencies"`     | Production/runtime dependencies (default, always recommended) |
+| `"devDependencies"`  | Build tools, test helpers, linters                            |
+| `"peerDependencies"` | Peer contracts provided by the consumer                       |
 
 External (npm registry) dependencies are ignored — layers only govern internal monorepo boundaries.
 
@@ -398,7 +412,8 @@ Use `"*"` to allow a layer to depend on any other layer:
     "workspaces": {
         "patterns": ["packages/**/*", "libs/**/*"],
         "protocols": ["workspace:"],
-        "ignore": ["**/node_modules/**", "**/lib/**", "**/dist/**"]
+        "ignore": ["**/node_modules/**", "**/lib/**", "**/dist/**"],
+        "dependencyTypes": ["dependencies"]
     }
 }
 ```

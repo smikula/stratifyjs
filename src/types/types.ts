@@ -76,6 +76,13 @@ export interface WorkspaceConfig {
      * @default ["**​/node_modules/**", "**​/lib/**", "**​/dist/**"]
      */
     ignore: string[];
+    /**
+     * Which dependency fields in package.json to check for internal dependencies.
+     * Valid values: "dependencies", "devDependencies", "peerDependencies".
+     *
+     * @default ["dependencies"]
+     */
+    dependencyTypes: string[];
 }
 
 /**

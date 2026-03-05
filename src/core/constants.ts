@@ -19,6 +19,21 @@ export const DEFAULT_PROTOCOLS: string[] = ['workspace:'];
 export const DEFAULT_IGNORE: string[] = ['**/node_modules/**', '**/lib/**', '**/dist/**'];
 
 /**
+ * Default dependency types to check for internal monorepo dependencies.
+ * Only production dependencies are checked by default.
+ */
+export const DEFAULT_DEPENDENCY_TYPES: string[] = ['dependencies'];
+
+/**
+ * Valid dependency type values accepted in the workspaces.dependencyTypes config.
+ */
+export const VALID_DEPENDENCY_TYPES = [
+    'dependencies',
+    'devDependencies',
+    'peerDependencies',
+] as const;
+
+/**
  * Default enforcement mode when none is specified in config.
  */
 export const DEFAULT_ENFORCEMENT_MODE: EnforcementMode = 'warn';

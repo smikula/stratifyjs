@@ -1,6 +1,11 @@
 import { applyDefaults, DEFAULT_ENFORCEMENT, DEFAULT_WORKSPACES } from '../config-defaults.js';
 import type { StratifyConfig } from '../../types/types.js';
-import { DEFAULT_PATTERNS, DEFAULT_PROTOCOLS, DEFAULT_IGNORE } from '../constants.js';
+import {
+    DEFAULT_PATTERNS,
+    DEFAULT_PROTOCOLS,
+    DEFAULT_IGNORE,
+    DEFAULT_DEPENDENCY_TYPES,
+} from '../constants.js';
 
 describe('applyDefaults', () => {
     // ── Minimal config (all defaults applied) ──────────────────────────
@@ -24,6 +29,7 @@ describe('applyDefaults', () => {
         expect(resolved.workspaces.patterns).toEqual(DEFAULT_PATTERNS);
         expect(resolved.workspaces.protocols).toEqual(DEFAULT_PROTOCOLS);
         expect(resolved.workspaces.ignore).toEqual(DEFAULT_IGNORE);
+        expect(resolved.workspaces.dependencyTypes).toEqual(DEFAULT_DEPENDENCY_TYPES);
     });
 
     // ── Override enforcement only ──────────────────────────────────────
@@ -40,6 +46,7 @@ describe('applyDefaults', () => {
         expect(resolved.workspaces.patterns).toEqual(DEFAULT_PATTERNS);
         expect(resolved.workspaces.protocols).toEqual(DEFAULT_PROTOCOLS);
         expect(resolved.workspaces.ignore).toEqual(DEFAULT_IGNORE);
+        expect(resolved.workspaces.dependencyTypes).toEqual(DEFAULT_DEPENDENCY_TYPES);
     });
 
     // ── Override workspaces only ───────────────────────────────────────
@@ -54,6 +61,7 @@ describe('applyDefaults', () => {
         expect(resolved.workspaces.patterns).toEqual(['apps/*', 'libs/*']);
         expect(resolved.workspaces.protocols).toEqual(DEFAULT_PROTOCOLS);
         expect(resolved.workspaces.ignore).toEqual(DEFAULT_IGNORE);
+        expect(resolved.workspaces.dependencyTypes).toEqual(DEFAULT_DEPENDENCY_TYPES);
         // enforcement should still get defaults
         expect(resolved.enforcement.mode).toBe('warn');
     });
@@ -85,6 +93,7 @@ describe('applyDefaults', () => {
         expect(resolved.workspaces.protocols).toEqual(['workspace:', 'link:']);
         expect(resolved.workspaces.patterns).toEqual(['packages/*']);
         expect(resolved.workspaces.ignore).toEqual(DEFAULT_IGNORE);
+        expect(resolved.workspaces.dependencyTypes).toEqual(DEFAULT_DEPENDENCY_TYPES);
     });
 
     it('uses provided workspaces ignore', () => {
@@ -100,5 +109,19 @@ describe('applyDefaults', () => {
 
         expect(resolved.workspaces.ignore).toEqual(['**/node_modules/**', '**/build/**']);
         expect(resolved.workspaces.patterns).toEqual(['packages/*']);
+    });
+
+    it('uses provided workspaces dependencyTypes', () => {
+        const config: StratifyConfig = {
+            layers: { core: { allowedDependencies: [] } },
+            workspaces: {
+                dependencyTypes: ['dependencies', 'devDependencies'],
+            },
+        };
+
+        const resolved = applyDefaults(config);
+
+        expect(resolved.workspaces.dependencyTypes).toEqual(['dependencies', 'devDependencies']);
+        expect(resolved.workspaces.patterns).toEqual(DEFAULT_PATTERNS);
     });
 });

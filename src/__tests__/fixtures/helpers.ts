@@ -29,6 +29,7 @@ export function createTestConfig(
             patterns: ['packages/**/*'],
             protocols: ['workspace:'],
             ignore: ['**/node_modules/**', '**/lib/**', '**/dist/**'],
+            dependencyTypes: ['dependencies'],
         },
         ...overrides,
     };

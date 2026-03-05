@@ -12,6 +12,7 @@ describe('discoverPackages', () => {
             patterns: ['packages/*'],
             protocols: ['workspace:'],
             ignore: ['**/node_modules/**', '**/lib/**', '**/dist/**'],
+            dependencyTypes: ['dependencies'],
         });
 
         expect(result.success).toBe(true);
@@ -38,6 +39,7 @@ describe('discoverPackages', () => {
             patterns: ['packages/*'],
             protocols: ['workspace:'],
             ignore: ['**/node_modules/**', '**/lib/**', '**/dist/**'],
+            dependencyTypes: ['dependencies'],
         });
 
         expect(result.success).toBe(true);
@@ -57,6 +59,7 @@ describe('discoverPackages', () => {
             patterns: ['packages/*'],
             protocols: ['workspace:'],
             ignore: ['**/node_modules/**', '**/lib/**', '**/dist/**'],
+            dependencyTypes: ['dependencies'],
         });
 
         expect(result.success).toBe(true);
@@ -80,6 +83,7 @@ describe('discoverPackages', () => {
             patterns: ['nonexistent/*'],
             protocols: ['workspace:'],
             ignore: ['**/node_modules/**', '**/lib/**', '**/dist/**'],
+            dependencyTypes: ['dependencies'],
         });
 
         expect(result.success).toBe(true);

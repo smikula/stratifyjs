@@ -76,7 +76,7 @@ StratifyJS reads package manifests; you do not need to install these example pac
 }
 ```
 
-This permits `features` to depend on `core`. Same-layer dependencies also need [explicit permission](docs/configuration.md#same-layer-dependencies); `"*"` permits all target layers, including the source layer, while an empty list permits none.
+This permits `features` to depend on `core`. By intentional policy, same-layer dependencies need [explicit permission](docs/configuration.md#same-layer-dependencies): a layer must list itself in `allowedDependencies`, or use `"*"`, for its packages to depend on each other. An empty list permits none.
 
 3. Run from the workspace root:
 

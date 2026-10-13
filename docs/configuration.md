@@ -64,9 +64,9 @@ A missing or empty layer produces a `missing-layer` violation. An unconfigured l
 
 ### Same-layer Dependencies
 
-There is no automatic same-layer exemption. A dependency from one `core` package to another is checked against `core.allowedDependencies`, just like a cross-layer dependency. Include `"core"` to permit it; an empty list permits none.
+By intentional policy, there is no automatic same-layer exemption. A layer must list itself in `allowedDependencies`, or use `"*"`, for its packages to depend on each other. For example, a dependency from one `core` package to another requires `"core"` or `"*"` in `core.allowedDependencies`; an empty list permits none.
 
-This is the current predicate behavior in `isDependencyAllowed()` in [rules.ts](../src/core/rules.ts), not a claim about the intended long-term policy.
+This policy is implemented by `isDependencyAllowed()` in [rules.ts](../src/core/rules.ts).
 
 ### Wildcard Dependencies
 

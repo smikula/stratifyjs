@@ -43,10 +43,11 @@ Production source changes outside those patterns still need a change file, even 
 The checked-in configuration and workflows define separate versioning and publishing steps:
 
 1. The [version-bump workflow](.github/workflows/version-bump.yml) runs on pushes to `master`, except pushes by `github-actions[bot]`. It installs dependencies and runs `yarn beachball bump` to consume change files and update version/changelog metadata, then commits and pushes if files changed.
-2. [beachball.config.cjs](beachball.config.cjs) selects Markdown changelog generation and disables Beachball's own publishing, pushing, and Git tagging. The version-bump workflow performs its Git push separately.
-3. The [publish workflow](.github/workflows/publish.yml) runs when a GitHub release is published or when manually dispatched. It installs dependencies, builds, tests, and runs `npm publish`. The package's `prepublishOnly` hook also runs `yarn build` and `yarn test`.
+2. [beachball.config.cjs](beachball.config.cjs) selects Markdown changelog generation and disables Beachball's own publishing, pushing, and Git tagging (`gitTags: false`). The version-bump workflow performs its Git push separately.
+3. A maintainer creates GitHub Releases and their associated tags manually through GitHub's web interface.
+4. The [publish workflow](.github/workflows/publish.yml) runs when a GitHub Release is published or when manually dispatched. It installs dependencies, builds, tests, and runs `npm publish`. The package's `prepublishOnly` hook also runs `yarn build` and `yarn test`.
 
-No checked-in workflow creates GitHub releases or tags. Their creation process, npm authorization settings, and whether these workflows have successfully run cannot be confirmed from these files alone.
+No checked-in workflow creates GitHub Releases or tags. The npm authorization settings and whether these workflows have successfully run cannot be confirmed from these files alone.
 
 ## Architecture
 

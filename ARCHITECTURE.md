@@ -111,6 +111,10 @@ This document describes the internal architecture of the `stratifyjs` package an
 | ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `types.ts` | Shared domain types for packages, layers, config, violations, enforcement/output modes, exception scopes, resolved exceptions, and accepted edges/usages. `StratifyConfig` models mutually exclusive inline/file-backed exceptions. API option/result types live in `api.ts`; adapter/core result types live with their modules. |
 
+## Layer Dependency Policy
+
+Same-layer package dependencies intentionally require explicit permission, just like cross-layer dependencies. A layer must list itself in `allowedDependencies`, or use `"*"`, for its packages to depend on each other; an empty list permits none. This policy is implemented by `isDependencyAllowed()` in [rules.ts](src/core/rules.ts). See [Same-layer Dependencies](docs/configuration.md#same-layer-dependencies) for the configuration reference.
+
 ## Data Flow
 
 ```

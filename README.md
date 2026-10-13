@@ -544,30 +544,11 @@ Add to your CI pipeline to enforce boundaries on every PR:
 
 The npm package is `stratifyjs`; its executable is `stratify`. The explicit `--package` selects the correct package instead of the unrelated npm package named `stratify`.
 
-## Development
+## Contributing
 
-```bash
-# Install dependencies
-yarn install
+See [CONTRIBUTING.md](CONTRIBUTING.md) for setup, validation commands, change files, and the versioning/release workflow.
 
-# Run tests
-yarn test
-
-# Run tests in watch mode
-yarn test:watch
-
-# Build (compile TypeScript → lib/)
-yarn build
-
-# Type-check without emitting
-yarn typecheck
-```
-
-## Documenting Changes
-
-This project uses [Beachball](https://microsoft.github.io/beachball/) to manage versioning and changelogs. Every PR that affects the published package must include a change file. Run `yarn change` before submitting your PR and follow the prompts. CI will fail if the change file is missing.
-
-> PRs that only touch tests, documentation, or configuration files are excluded from this requirement.
+Changes affecting the published package need a Beachball change file unless all changed paths match `ignorePatterns` in [beachball.config.cjs](beachball.config.cjs). Test-only changes under `src/**/__tests__/**` are exempt, along with the other paths listed there; that list is the source of truth for exemptions.
 
 ## License
 

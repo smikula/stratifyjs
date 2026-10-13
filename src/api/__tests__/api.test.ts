@@ -10,6 +10,40 @@ const MONOREPO_DIR = resolve(FIXTURES_DIR, 'sample-monorepo');
 const CONFIGS_DIR = resolve(FIXTURES_DIR, 'configs');
 
 describe('validateLayers', () => {
+    it.each([
+        { mode: 'bogus' },
+        { mode: '' },
+        { mode: null },
+        { mode: false },
+        { mode: 0 },
+        { mode: ['warn'] },
+    ])('rejects invalid JavaScript mode overrides: %j', async ({ mode }) => {
+        const validation = validateLayers({
+            workspaceRoot: MONOREPO_DIR,
+            configPath: resolve(CONFIGS_DIR, 'valid-config.json'),
+            // @ts-expect-error Exercise invalid input from JavaScript callers.
+            mode,
+        });
+
+        await expect(validation).rejects.toBeInstanceOf(StratifyError);
+        await expect(validation).rejects.toMatchObject({
+            type: 'config-validation-error',
+            message: expect.stringMatching(/Invalid enforcement mode.*error.*warn.*off/),
+        });
+    });
+
+    it('returns the same ordinary violations in warn and error modes', async () => {
+        const options = {
+            workspaceRoot: MONOREPO_DIR,
+            configPath: resolve(CONFIGS_DIR, 'valid-config.json'),
+        };
+        const warn = await validateLayers({ ...options, mode: 'warn' });
+        const error = await validateLayers({ ...options, mode: 'error' });
+
+        expect(warn.violations).toHaveLength(1);
+        expect(error.violations).toEqual(warn.violations);
+    });
+
     it('runs the full pipeline and finds the expected violation', async () => {
         const result = await validateLayers({
             workspaceRoot: MONOREPO_DIR,

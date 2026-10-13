@@ -66,6 +66,8 @@ npm install -g stratifyjs
 }
 ```
 
+Same-layer dependencies also need explicit permission. For example, to let `core` packages depend on other `core` packages, use `"allowedDependencies": ["core", "shared"]`. `"*"` permits all target layers, including the source layer; an empty array permits none.
+
 3. Run:
 
 ```bash
@@ -106,6 +108,10 @@ stratify --format json
 stratify -c stratify.config.json -r ../.. -m error --format console
 ```
 
+With `--format json`, completed validation writes exactly one JSON document to stdout, containing `violations`, `acceptedExceptions`, `totalPackages`, and `duration`. Progress text is suppressed, and stdout contains no terminal color codes. Violations in `error` mode still produce this JSON result, but exit with code `1`. Fatal errors write a diagnostic to stderr, leave stdout empty, and exit with code `1`; they do not produce a JSON result.
+
+Invalid `--mode` or `--format` values are rejected with a diagnostic on stderr and a non-zero exit code.
+
 ### Exit Codes
 
 | Code | Meaning                                                         |
@@ -128,7 +134,7 @@ try {
     const result = await validateLayers({
         workspaceRoot: '/path/to/monorepo',
         configPath: 'stratify.config.json',
-        mode: 'error', // optional override
+        mode: 'error', // optional override; violations are returned, not thrown
     });
 
     console.log(`Checked ${result.totalPackages} packages, found ${result.violations.length} violations`);
@@ -139,9 +145,16 @@ try {
     for (const usage of result.acceptedExceptions) {
         console.log(usage.exception.owner, usage.acceptedEdges);
     }
+    // The API caller decides whether ordinary violations fail the integration.
+    if (result.violations.length > 0) {
+        process.exitCode = 1;
+    }
 } catch (error) {
     if (error instanceof StratifyError) {
         console.error(error.type, error.message);
+        process.exitCode = 1;
+    } else {
+        throw error;
     }
 }
 ```
@@ -166,6 +179,8 @@ try {
 
 Each `Violation` has a short `message` for programmatic use and a rich `detailedMessage` with actionable context for human-readable output.
 
+The API returns the same ordinary violations in `warn` and `error` modes; neither mode throws just because violations exist. Only the CLI maps `error` plus violations to exit code `1`. API callers must inspect `result.violations` and decide how to fail their own tooling. `off` suppresses ordinary violations, but does not disable configuration or dependency-exception checks.
+
 ### Pre-built config
 
 You can pass a config object directly instead of loading from a file:
@@ -187,7 +202,7 @@ const result = await validateLayers({
 
 ### Error handling
 
-Infrastructure failures (missing config, bad JSON, discovery errors) throw a `StratifyError`:
+Configuration failures (missing config, invalid config JSON/schema), dependency-exception errors, and fatal discovery errors throw a `StratifyError` in every enforcement mode. Invalid `options.mode` overrides from JavaScript callers also throw with type `config-validation-error`; supported values are `error`, `warn`, and `off`. Malformed package manifests are skipped instead, as described under [Scan Coverage](#scan-coverage).
 
 ```typescript
 import { validateLayers, StratifyError } from 'stratifyjs';
@@ -217,7 +232,7 @@ The config file (default: `stratify.config.json`) is a JSON object with four sec
 
 ### `layers` (required)
 
-A map of layer names to their definitions. Each layer must specify which other layers it is allowed to depend on.
+A map of layer names to their definitions. Each layer must specify which target layers it is allowed to depend on, including its own layer when same-layer dependencies should be permitted.
 
 ```json
 {
@@ -245,6 +260,8 @@ A map of layer names to their definitions. Each layer must specify which other l
 | `allowedPackages`     | `string[]` | No       | Inline list of package names allowed to declare this layer. An empty array prevents every package from declaring it. Mutually exclusive with `allowedPackagesFile`. |
 | `allowedPackagesFile` | `string`   | No       | Path to a JSON file (relative to workspace root) containing an array of allowed package names. Mutually exclusive with `allowedPackages`. |
 
+Layer names in `allowedDependencies` are not checked against the configured layer names. An unknown name or typo is accepted by config validation, so review these lists carefully.
+
 ### `enforcement` (optional)
 
 Controls how violations are reported.
@@ -259,7 +276,9 @@ Controls how violations are reported.
 
 | Field  | Type                         | Default  | Description                                                               |
 | ------ | ---------------------------- | -------- | ------------------------------------------------------------------------- |
-| `mode` | `"error" \| "warn" \| "off"` | `"warn"` | `error` = non-zero exit on violations; `warn` = report only; `off` = skip |
+| `mode` | `"error" \| "warn" \| "off"` | `"warn"` | CLI: `error` = non-zero exit on violations; `warn` = report only; `off` = suppress ordinary violations |
+
+The API returns ordinary violations without throwing in both `error` and `warn` modes. Configuration and dependency-exception failures remain fatal in every mode, including `off`. Config and exception files are loaded and validated before any `off` early return. When the resolved exception list is empty, `off` skips package discovery; otherwise it still discovers packages, validates exceptions, and reports accepted exceptions while suppressing ordinary violations.
 
 ### `workspaces` (optional)
 
@@ -276,9 +295,11 @@ Controls which packages are discovered and how internal dependencies are detecte
 }
 ```
 
+Each supplied workspace array **replaces**, rather than extends, its default: `patterns`, `protocols`, `ignore`, and `dependencyTypes`. Include every value you still need. For example, adding `"link:"` requires keeping `"workspace:"` explicitly, and a custom ignore list must retain the default exclusions if you want them.
+
 | Field              | Type       | Default                                                    | Description                                                                                               |
 | ------------------ | ---------- | ---------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
-| `patterns`         | `string[]` | `["packages/**/*"]`                                        | Glob patterns to locate workspace packages (each must contain a `package.json`)                           |
+| `patterns`         | `string[]` | `["packages/**/*"]`                                        | Package-directory glob patterns; `/package.json` is appended to each pattern. Do not include the filename. |
 | `protocols`        | `string[]` | `["workspace:"]`                                           | Version-string prefixes that identify internal dependencies. Common values: `"workspace:"`, `"link:"`, `"portal:"`, `"file:"` |
 | `ignore`           | `string[]` | `["**/node_modules/**", "**/lib/**", "**/dist/**"]`        | Glob patterns to exclude from package discovery                                                           |
 | `dependencyTypes`  | `string[]` | `["dependencies"]`                                         | Which `package.json` dependency fields to check. Valid values: `"dependencies"`, `"devDependencies"`, `"peerDependencies"` |
@@ -298,6 +319,10 @@ Each workspace package declares its layer via the `"layer"` field in `package.js
 ```
 
 Packages missing the `"layer"` field produce a `missing-layer` violation.
+
+### Same-layer Dependencies
+
+There is no automatic same-layer exemption. A dependency from one `core` package to another is checked against `core.allowedDependencies`, just like a cross-layer dependency. Include `"core"` in that list to permit it, or use `"*"`. With an empty list, even same-layer dependencies are violations.
 
 ### Dependency Detection
 
@@ -320,6 +345,17 @@ By default, only the `dependencies` field is scanned — this represents the tru
 | `"peerDependencies"` | Peer contracts provided by the consumer                       |
 
 External (npm registry) dependencies are ignored — layers only govern internal monorepo boundaries.
+
+When a package lists the same dependency name in multiple selected fields, those fields are merged in `dependencyTypes` order **before** protocol filtering. The last entry wins. For example, with `["dependencies", "devDependencies"]`, a `devDependencies` entry of `"target": "^1.0.0"` hides a `dependencies` entry of `"target": "workspace:*"`, so that dependency is not checked. Reversing the field order makes the workspace entry win.
+
+### Scan Coverage
+
+Only successfully discovered packages and protocol-matching dependencies in the selected fields participate in the scan:
+
+- Edges to undiscovered packages or packages without a layer are skipped. A discovered package without a layer still receives its own `missing-layer` violation.
+- A manifest with invalid JSON or a missing/invalid `name` is left out of discovery and `totalPackages`. Discovery warnings are not exposed by the current CLI or API, so omitted packages can make a scan look cleaner than it is.
+- Duplicate package names are not rejected. Dependency target lookup uses the last discovered package with that name; do not rely on discovery order.
+- The default ignore list excludes `**/node_modules/**`, `**/lib/**`, and `**/dist/**`. Packages under a directory named `lib` are therefore skipped too, even if it contains source rather than build output.
 
 ### Violation Types
 
@@ -423,7 +459,11 @@ Each entry must use exactly one supported scope:
 | Exact edge | `fromPackage`, `toPackage`, `owner`, `reason` | Allows one package to depend on one package |
 | Designated capability | `fromLayer`, `toPackage`, `owner`, `reason` | Allows packages in one layer to depend on one package |
 
-Broad layer-to-layer exceptions are intentionally unsupported. `owner` and `reason` must be non-empty. Source layers and all referenced packages must exist, and each exception must match at least one discovered runtime dependency that would otherwise violate `allowedDependencies`. Duplicate, overlapping, stale, unnecessary, and otherwise unused exceptions are configuration errors. Inline and file-backed entries use the same validation and semantics.
+Broad layer-to-layer exceptions are intentionally unsupported. `owner` and `reason` must be non-empty. Source layers and all referenced packages must exist, and each exception must match at least one discovered runtime dependency that would otherwise violate `allowedDependencies`. Duplicate, overlapping, stale, unnecessary, and otherwise unused exceptions are configuration errors in every mode, including `warn` and `off`. Inline and file-backed entries use the same validation and semantics.
+
+For an exception to apply, the target must appear both in the source package's protocol-matching `dependencies` (runtime dependencies) and in the internal dependency names extracted from the fields selected by `workspaces.dependencyTypes`. Dev-only or peer-only edges cannot use exceptions. A runtime edge absent from the selected fields makes its exception stale. If `dependencies` is not selected but the same target is also present with a configured protocol in a selected field, such as `devDependencies`, the exception can still apply.
+
+The dependency-field shadowing rule above also affects exceptions: a later registry-version entry can remove a runtime target from the selected internal dependency names and make its exception stale.
 
 Successful uses are never hidden: the API returns them in `acceptedExceptions`, and both console and JSON CLI output report them separately from violations. Each accepted item includes the resolved exception and its `acceptedEdges`.
 
@@ -491,14 +531,16 @@ Add to your CI pipeline to enforce boundaries on every PR:
 ```yaml
 # GitHub Actions
 - name: Enforce layers
-  run: npx stratify --config stratify.config.json --mode error
+  run: npx --package=stratifyjs stratify --config stratify.config.json --mode error
 ```
 
 ```yaml
 # Azure Pipelines
-- script: npx stratify --config stratify.config.json --mode error
+- script: npx --package=stratifyjs stratify --config stratify.config.json --mode error
   displayName: 'Enforce layer boundaries'
 ```
+
+The npm package is `stratifyjs`; its executable is `stratify`. The explicit `--package` selects the correct package instead of the unrelated npm package named `stratify`.
 
 ## Development
 

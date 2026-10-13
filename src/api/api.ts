@@ -4,7 +4,7 @@ import { loadConfigFromFile } from '../adapters/config-file-loader.js';
 import { loadDependencyExceptions } from '../adapters/dependency-exceptions-file-loader.js';
 import { discoverPackages } from '../adapters/file-system-discovery.js';
 import { applyDefaults } from '../core/config-defaults.js';
-import { validateConfigSchema } from '../core/config-schema.js';
+import { validateConfigSchema, validateEnforcementMode } from '../core/config-schema.js';
 import { DEFAULT_CONFIG_FILENAME } from '../core/constants.js';
 import { StratifyError } from '../core/errors.js';
 import { validatePackagesWithExceptions } from '../core/validation.js';
@@ -26,7 +26,7 @@ export interface ValidateLayersOptions {
     configPath?: string;
     /** Provide a pre-built config directly, skipping file loading. */
     config?: StratifyConfig;
-    /** Override the enforcement mode from config. */
+    /** Override the mode. Warn/error return violations; off suppresses them. */
     mode?: EnforcementMode;
 }
 
@@ -45,7 +45,7 @@ export interface ValidateLayersResult {
  *
  * @param options - Configuration and workspace options.
  * @returns Violations, accepted exception usage, total package count, and duration.
- * @throws {StratifyError} On config loading/parsing or package discovery failures.
+ * @throws {StratifyError} On invalid options/config, exception errors or discovery failures.
  *
  * @example
  * ```ts
@@ -67,6 +67,13 @@ export async function validateLayers(
     options: ValidateLayersOptions = {}
 ): Promise<ValidateLayersResult> {
     const startTime = performance.now();
+
+    if (options.mode !== undefined) {
+        const modeResult = validateEnforcementMode(options.mode);
+        if (!modeResult.success) {
+            throw new StratifyError(modeResult.error);
+        }
+    }
 
     const workspaceRoot = resolve(options.workspaceRoot ?? process.cwd());
 
@@ -90,14 +97,14 @@ export async function validateLayers(
     config = await resolveDependencyExceptions(config, workspaceRoot);
 
     // Apply mode override
-    if (options.mode) {
+    if (options.mode !== undefined) {
         config = {
             ...config,
             enforcement: { ...config.enforcement, mode: options.mode },
         };
     }
 
-    // Short-circuit when enforcement is off — skip all discovery and validation
+    // Off can skip discovery only when there are no exceptions to validate.
     if (config.enforcement.mode === 'off' && config.dependencyExceptions.length === 0) {
         const duration = performance.now() - startTime;
         return { violations: [], acceptedExceptions: [], totalPackages: 0, duration };

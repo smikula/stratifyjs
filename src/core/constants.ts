@@ -61,3 +61,5 @@ export const WILDCARD_LAYER = '*';
  * Default CLI output format.
  */
 export const DEFAULT_OUTPUT_FORMAT: OutputFormat = 'console';
+
+export const VALID_OUTPUT_FORMATS = ['console', 'json'] as const satisfies readonly OutputFormat[];

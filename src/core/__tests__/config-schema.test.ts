@@ -1,4 +1,32 @@
-import { validateConfigSchema, validateLayerDefinition } from '../config-schema.js';
+import {
+    validateConfigSchema,
+    validateEnforcementMode,
+    validateLayerDefinition,
+} from '../config-schema.js';
+
+describe('validateEnforcementMode', () => {
+    it.each(['error', 'warn', 'off'])('accepts %s', mode => {
+        expect(validateEnforcementMode(mode)).toEqual({ success: true, value: mode });
+    });
+
+    it.each([
+        { mode: 'bogus' },
+        { mode: '' },
+        { mode: null },
+        { mode: undefined },
+        { mode: false },
+        { mode: 0 },
+        { mode: ['warn'] },
+    ])('rejects %j', ({ mode }) => {
+        expect(validateEnforcementMode(mode)).toEqual({
+            success: false,
+            error: {
+                type: 'config-validation-error',
+                message: expect.stringMatching(/Invalid enforcement mode.*error.*warn.*off/),
+            },
+        });
+    });
+});
 
 describe('validateConfigSchema', () => {
     it('returns ok for a valid minimal config', () => {

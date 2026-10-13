@@ -75,23 +75,44 @@ describe('handleValidateCommand', () => {
         expect(exitCode).toBe(1);
     });
 
-    it('outputs JSON format when format option is json', async () => {
+    it.each([
+        { mode: 'warn', exitCode: 0, totalPackages: 4, violations: 1 },
+        { mode: 'error', exitCode: 1, totalPackages: 4, violations: 1 },
+        { mode: 'off', exitCode: 0, totalPackages: 0, violations: 0 },
+    ] as const)('outputs only JSON in $mode mode', async expected => {
         const logSpy = jest.spyOn(console, 'log');
+        const errorSpy = jest.spyOn(console, 'error');
 
-        await handleValidateCommand(buildCliOptions({ mode: 'warn', format: 'json' }));
+        const exitCode = await handleValidateCommand(
+            buildCliOptions({ mode: expected.mode, format: 'json' })
+        );
+        const result = JSON.parse(logSpy.mock.calls.flat().join('\n'));
 
-        const jsonOutput = logSpy.mock.calls.find(call => {
-            try {
-                const parsed = JSON.parse(call[0] as string);
-                return 'violations' in parsed && 'totalPackages' in parsed;
-            } catch {
-                return false;
-            }
-        });
-
-        expect(jsonOutput).toBeDefined();
-        expect(JSON.parse(jsonOutput![0] as string)).toHaveProperty('acceptedExceptions');
+        expect(exitCode).toBe(expected.exitCode);
+        expect(result.totalPackages).toBe(expected.totalPackages);
+        expect(result.violations).toHaveLength(expected.violations);
+        expect(result.acceptedExceptions).toEqual([]);
+        expect(result.duration).toEqual(expect.any(Number));
+        expect(errorSpy).not.toHaveBeenCalled();
     });
+
+    it.each(['nonexistent.json', resolve(CONFIGS_DIR, 'invalid-config-bad-mode.json')])(
+        'leaves JSON stdout empty on fatal config error: %s',
+        async config => {
+            const logSpy = jest.spyOn(console, 'log');
+            const errorSpy = jest.spyOn(console, 'error');
+
+            const exitCode = await handleValidateCommand(
+                buildCliOptions({ config, format: 'json' })
+            );
+
+            expect(exitCode).toBe(1);
+            expect(logSpy).not.toHaveBeenCalled();
+            expect(errorSpy.mock.calls.flat().join('\n')).toMatch(
+                /Config file not found|Invalid enforcement mode/
+            );
+        }
+    );
 
     it('reports accepted exceptions separately in console and JSON output', async () => {
         const config = resolve(CONFIGS_DIR, 'valid-config-with-exception.json');
@@ -101,18 +122,10 @@ describe('handleValidateCommand', () => {
         expect(logSpy.mock.calls.flat().join('\n')).toContain('Accepted 1 dependency exception');
 
         logSpy.mockClear();
-        await handleValidateCommand(buildCliOptions({ config, format: 'json' }));
-        const output = logSpy.mock.calls
-            .map(call => call[0] as string)
-            .find(message => {
-                try {
-                    return JSON.parse(message).acceptedExceptions !== undefined;
-                } catch {
-                    return false;
-                }
-            });
+        expect(await handleValidateCommand(buildCliOptions({ config, format: 'json' }))).toBe(0);
+        const output = logSpy.mock.calls.flat().join('\n');
 
-        expect(JSON.parse(output!)).toMatchObject({
+        expect(JSON.parse(output)).toMatchObject({
             violations: [],
             acceptedExceptions: [{ acceptedEdges: [{ fromPackage: '@sample/bad-pkg' }] }],
         });
@@ -123,16 +136,11 @@ describe('handleValidateCommand', () => {
         const logSpy = jest.spyOn(console, 'log');
 
         expect(await handleValidateCommand(buildCliOptions({ config, format: 'json' }))).toBe(0);
-        const output = logSpy.mock.calls
-            .map(call => call[0] as string)
-            .find(message => {
-                try {
-                    return JSON.parse(message).acceptedExceptions?.length === 1;
-                } catch {
-                    return false;
-                }
-            });
+        const output = logSpy.mock.calls.flat().join('\n');
 
-        expect(output).toBeDefined();
+        expect(JSON.parse(output)).toMatchObject({
+            violations: [],
+            acceptedExceptions: [{ acceptedEdges: [{ fromPackage: '@sample/bad-pkg' }] }],
+        });
     });
 });

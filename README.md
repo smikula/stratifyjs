@@ -179,7 +179,7 @@ try {
 
 Each `Violation` has a short `message` for programmatic use and a rich `detailedMessage` with actionable context for human-readable output.
 
-The API returns the same ordinary violations in `warn` and `error` modes; neither mode throws just because violations exist. Only the CLI maps `error` plus violations to exit code `1`. API callers must inspect `result.violations` and decide how to fail their own tooling. `off` suppresses ordinary violations, but does not disable configuration or dependency-exception checks.
+The API returns the same ordinary violations in `warn` and `error` modes; neither mode throws just because violations exist. Only the CLI maps `error` plus violations to exit code `1`. API callers must inspect `result.violations` and decide how to fail their own tooling. `off` suppresses ordinary violations; main-config and dependency-exception checks remain active, but discovery and allowlist-file loading may be skipped as described under [`enforcement`](#enforcement-optional).
 
 ### Pre-built config
 
@@ -202,7 +202,7 @@ const result = await validateLayers({
 
 ### Error handling
 
-Configuration failures (missing config, invalid config JSON/schema), dependency-exception errors, and fatal discovery errors throw a `StratifyError` in every enforcement mode. Invalid `options.mode` overrides from JavaScript callers also throw with type `config-validation-error`; supported values are `error`, `warn`, and `off`. Malformed package manifests are skipped instead, as described under [Scan Coverage](#scan-coverage).
+Main-config failures (missing config, invalid config JSON/schema) and dependency-exception errors throw a `StratifyError` in every enforcement mode. Fatal discovery and allowlist-file errors also throw when validation proceeds; `off` with an empty resolved exception list skips those stages. Invalid `options.mode` overrides from JavaScript callers also throw with type `config-validation-error`; supported values are `error`, `warn`, and `off`. Malformed package manifests are skipped instead, as described under [Scan Coverage](#scan-coverage).
 
 ```typescript
 import { validateLayers, StratifyError } from 'stratifyjs';
@@ -278,7 +278,9 @@ Controls how violations are reported.
 | ------ | ---------------------------- | -------- | ------------------------------------------------------------------------- |
 | `mode` | `"error" \| "warn" \| "off"` | `"warn"` | CLI: `error` = non-zero exit on violations; `warn` = report only; `off` = suppress ordinary violations |
 
-The API returns ordinary violations without throwing in both `error` and `warn` modes. Configuration and dependency-exception failures remain fatal in every mode, including `off`. Config and exception files are loaded and validated before any `off` early return. When the resolved exception list is empty, `off` skips package discovery; otherwise it still discovers packages, validates exceptions, and reports accepted exceptions while suppressing ordinary violations.
+The API returns ordinary violations without throwing in both `error` and `warn` modes. Main config and configured dependency-exception files are resolved and validated before any `off` early return, so errors from those stages remain fatal in every mode.
+
+Allowlist files are loaded only when validation proceeds. When the resolved exception list is empty, `off` skips package discovery, allowlist-file loading, and package validation. With non-empty exceptions, `off` still runs those stages, validates exceptions, and reports accepted exceptions while suppressing ordinary violations. Allowlist-file errors are fatal whenever those files are loaded, including in `off` with non-empty exceptions.
 
 ### `workspaces` (optional)
 

@@ -21,11 +21,10 @@ program
     .option('--format <type>', 'Output format (console|json)', DEFAULT_OUTPUT_FORMAT)
     .parse(process.argv);
 
-const options = parseCliOptions(program.opts());
-
-handleValidateCommand(options)
-    .then(code => process.exit(code))
-    .catch(error => {
-        console.error('Fatal error:', error);
-        process.exit(1);
-    });
+try {
+    const options = parseCliOptions(program.opts());
+    process.exitCode = await handleValidateCommand(options);
+} catch (error) {
+    console.error('Fatal error:', error instanceof Error ? error.message : error);
+    process.exitCode = 1;
+}

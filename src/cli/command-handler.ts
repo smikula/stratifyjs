@@ -13,9 +13,11 @@ export async function handleValidateCommand(options: CliOptions): Promise<number
     const workspaceRoot = resolve(options.root);
     const configPath = resolve(workspaceRoot, options.config);
 
-    logInfo('🔍 Enforce Layers\n');
-    logGray(`Root: ${workspaceRoot}`);
-    logGray(`Config: ${configPath}\n`);
+    if (options.format === 'console') {
+        logInfo('🔍 Enforce Layers\n');
+        logGray(`Root: ${workspaceRoot}`);
+        logGray(`Config: ${configPath}\n`);
+    }
 
     try {
         // Load config in the CLI so we can read the resolved enforcement mode
@@ -29,8 +31,6 @@ export async function handleValidateCommand(options: CliOptions): Promise<number
         const effectiveMode = options.mode ?? config.enforcement.mode;
 
         const result = await validateLayers(toLibraryOptions(options));
-
-        logSuccess(`✅ Discovered ${result.totalPackages} packages\n`);
 
         if (options.format === 'json') {
             logPlain(
@@ -46,6 +46,8 @@ export async function handleValidateCommand(options: CliOptions): Promise<number
                 )
             );
         } else {
+            logSuccess(`✅ Discovered ${result.totalPackages} packages\n`);
+
             if (result.acceptedExceptions.length > 0) {
                 logInfo(
                     `📌 Accepted ${result.acceptedExceptions.length} dependency exception(s):\n`

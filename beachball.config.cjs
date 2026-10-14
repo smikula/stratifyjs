@@ -27,7 +27,7 @@ module.exports = {
     // error. These are files that don't affect the published package.
     ignorePatterns: [
         '.github/**', // CI/CD workflows
-        'src/__tests__/**', // Test files
+        'src/**/__tests__/**', // All test folders under src
         '*.md', // Documentation
         'jest.config.mjs', // Test configuration
         'tsconfig.json', // TypeScript configuration

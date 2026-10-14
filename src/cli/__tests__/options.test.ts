@@ -1,4 +1,5 @@
 import { parseCliOptions, toLibraryOptions } from '../options.js';
+import { StratifyError } from '../../core/errors.js';
 
 describe('parseCliOptions', () => {
     it('parses all provided options', () => {
@@ -32,6 +33,34 @@ describe('parseCliOptions', () => {
         // and CLI can fall back to the config file's mode instead.
         const result = parseCliOptions({});
         expect(result.mode).toBeUndefined();
+    });
+
+    it.each(['error', 'warn', 'off'])('accepts mode %s', mode => {
+        expect(parseCliOptions({ mode }).mode).toBe(mode);
+    });
+
+    it.each(['console', 'json'])('accepts format %s', format => {
+        expect(parseCliOptions({ format }).format).toBe(format);
+    });
+
+    it.each([
+        { mode: 'bogus' },
+        { mode: '' },
+        { mode: null },
+        { mode: false },
+        { mode: 0 },
+        { mode: ['warn'] },
+        { format: 'bogus' },
+        { format: '' },
+        { format: null },
+        { format: false },
+        { format: 0 },
+        { format: ['json'] },
+    ])('rejects invalid option values: %j', raw => {
+        expect(() => parseCliOptions(raw)).toThrow(StratifyError);
+        expect(() => parseCliOptions(raw)).toThrow(
+            /Invalid enforcement mode.*error.*warn.*off|Invalid output format.*console.*json/
+        );
     });
 });
 

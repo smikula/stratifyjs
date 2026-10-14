@@ -70,7 +70,8 @@ export interface ResolvedLayerDependencyException extends LayerDependencyExcepti
 
 /** A configured dependency exception with an explicit scope and stable config index. */
 export type ResolvedDependencyException =
-    ResolvedPackageDependencyException | ResolvedLayerDependencyException;
+    | ResolvedPackageDependencyException
+    | ResolvedLayerDependencyException;
 
 /** One real dependency edge accepted by a configured exception. */
 export interface AcceptedDependencyEdge {
@@ -185,7 +186,10 @@ export interface Violation {
  * Violation types
  */
 export type ViolationType =
-    'missing-layer' | 'unknown-layer' | 'invalid-dependency' | 'unauthorized-layer-member';
+    | 'missing-layer'
+    | 'unknown-layer'
+    | 'invalid-dependency'
+    | 'unauthorized-layer-member';
 
 /**
  * Represents a discovered package in the monorepo

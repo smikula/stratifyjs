@@ -5,12 +5,24 @@ import type {
     EnforcementConfig,
     WorkspaceConfig,
     DependencyException,
+    EnforcementMode,
 } from '../types/types.js';
 import type { ConfigError } from './errors.js';
 import type { Result } from './result.js';
 import { ok, err } from './result.js';
 import { VALID_ENFORCEMENT_MODES, VALID_DEPENDENCY_TYPES } from './constants.js';
 import { formatDependencyExceptionLabel } from './dependency-exception-label.js';
+
+export function validateEnforcementMode(mode: unknown): Result<EnforcementMode, ConfigError> {
+    const validMode = VALID_ENFORCEMENT_MODES.find(value => value === mode);
+    if (validMode === undefined) {
+        return err({
+            type: 'config-validation-error',
+            message: `Invalid enforcement mode: "${String(mode)}". Must be ${VALID_ENFORCEMENT_MODES.map(m => `"${m}"`).join(', ')}`,
+        });
+    }
+    return ok(validMode);
+}
 
 /**
  * Validate that a raw parsed object conforms to the StratifyConfig schema.
@@ -89,15 +101,11 @@ export function validateConfigSchema(raw: unknown): Result<StratifyConfig, Confi
         }
 
         const enforcement = obj.enforcement as Record<string, unknown>;
-        if (
-            enforcement.mode !== undefined &&
-            (typeof enforcement.mode !== 'string' ||
-                !(VALID_ENFORCEMENT_MODES as readonly string[]).includes(enforcement.mode))
-        ) {
-            return err({
-                type: 'config-validation-error',
-                message: `Invalid enforcement mode: "${enforcement.mode}". Must be ${VALID_ENFORCEMENT_MODES.map(m => `"${m}"`).join(', ')}`,
-            });
+        if (enforcement.mode !== undefined) {
+            const modeResult = validateEnforcementMode(enforcement.mode);
+            if (!modeResult.success) {
+                return modeResult;
+            }
         }
     }
 

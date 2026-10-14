@@ -1,4 +1,5 @@
 import { validatePackages, validatePackagesWithExceptions } from '../validation.js';
+import { parsePackageJson } from '../package-parser.js';
 import { createTestConfig, createTestPackage } from '../../__tests__/fixtures/helpers.js';
 import type { Package, StratifyResolvedConfig } from '../../types/types.js';
 
@@ -40,6 +41,59 @@ describe('validatePackages', () => {
     });
 
     // ── Unknown layer ──────────────────────────────────────────────────
+    it.each([5, false, null, [], {}])(
+        'diagnoses a non-string layer as invalid without skipping the package: %j',
+        layer => {
+            const parsed = parsePackageJson(
+                { name: '@app/invalid-layer', layer },
+                'packages/invalid-layer/package.json',
+                ['workspace:'],
+                ['dependencies']
+            );
+
+            expect(parsed.success).toBe(true);
+            if (!parsed.success) {
+                throw new Error(parsed.error.message);
+            }
+            expect(parsed.value.layer).toBeUndefined();
+            expect(parsed.value.invalidLayer).toBe(true);
+            const violations = validatePackages([parsed.value], config);
+
+            expect(violations).toHaveLength(1);
+            expect(violations[0].type).toBe('missing-layer');
+            expect(violations[0].message).toContain('invalid "layer"');
+            expect(violations[0].message).toContain('must be a string');
+            expect(violations[0].detailedMessage).toContain('Invalid Layer');
+            expect(violations[0].detailedMessage).toContain('non-empty string');
+            expect(violations[0].detailedMessage).toContain(parsed.value.path);
+            expect(violations[0].detailedMessage).not.toContain('Add a "layer"');
+        }
+    );
+
+    it.each([undefined, '', 'core'])(
+        'does not mark an absent or string layer as a non-string value: %s',
+        layer => {
+            const parsed = parsePackageJson(
+                { name: '@app/layer', layer },
+                'packages/layer/package.json',
+                ['workspace:'],
+                ['dependencies']
+            );
+            expect(parsed.success).toBe(true);
+            if (!parsed.success) {
+                throw new Error(parsed.error.message);
+            }
+            expect(parsed.value.invalidLayer).toBeUndefined();
+            const violations = validatePackages([parsed.value], config);
+            if (layer === 'core') {
+                expect(violations).toEqual([]);
+            } else {
+                expect(violations[0].message).toContain('missing');
+                expect(violations[0].detailedMessage).toContain('Missing Layer');
+            }
+        }
+    );
+
     it('returns an unknown-layer violation for unrecognized layer names', () => {
         const packages: Package[] = [createTestPackage({ name: '@app/mystery', layer: 'data' })];
 
@@ -539,4 +593,101 @@ describe('dependency exceptions', () => {
 
         expect(result.exceptionErrors).toEqual([expect.stringContaining('is stale')]);
     });
+
+    it.each([
+        {
+            fields: 'runtime workspace, dev registry',
+            order: ['dependencies', 'devDependencies'],
+            dependencies: { '@app/infra': 'workspace:*' },
+            devDependencies: { '@app/infra': '^1.0.0' },
+            exceptionAccepted: true,
+        },
+        {
+            fields: 'runtime workspace, dev registry',
+            order: ['devDependencies', 'dependencies'],
+            dependencies: { '@app/infra': 'workspace:*' },
+            devDependencies: { '@app/infra': '^1.0.0' },
+            exceptionAccepted: true,
+        },
+        {
+            fields: 'runtime registry, dev workspace',
+            order: ['dependencies', 'devDependencies'],
+            dependencies: { '@app/infra': '^1.0.0' },
+            devDependencies: { '@app/infra': 'workspace:*' },
+            exceptionAccepted: false,
+        },
+        {
+            fields: 'runtime registry, dev workspace',
+            order: ['devDependencies', 'dependencies'],
+            dependencies: { '@app/infra': '^1.0.0' },
+            devDependencies: { '@app/infra': 'workspace:*' },
+            exceptionAccepted: false,
+        },
+    ])(
+        'checks repeated dependency names regardless of field order: $fields, $order',
+        ({ order, dependencies, devDependencies, exceptionAccepted }) => {
+            const packages = [
+                { name: '@app/shell', layer: 'ui', dependencies, devDependencies },
+                { name: '@app/infra', layer: 'infra' },
+            ].map(content => {
+                const result = parsePackageJson(
+                    content,
+                    `packages/${content.name}`,
+                    ['workspace:'],
+                    order
+                );
+                if (!result.success) {
+                    throw new Error(result.error.message);
+                }
+                return result.value;
+            });
+            const configFor = (withException: boolean) =>
+                createTestConfig({
+                    workspaces: {
+                        patterns: [],
+                        protocols: ['workspace:'],
+                        ignore: [],
+                        dependencyTypes: order,
+                    },
+                    dependencyExceptions: withException
+                        ? [
+                              {
+                                  fromPackage: '@app/shell',
+                                  toPackage: '@app/infra',
+                                  owner: 'platform',
+                                  reason: 'Temporary bridge',
+                              },
+                          ]
+                        : [],
+                });
+            const violation = expect.objectContaining({
+                type: 'invalid-dependency',
+                package: '@app/shell',
+            });
+
+            expect(validatePackagesWithExceptions(packages, configFor(false)).violations).toEqual([
+                violation,
+            ]);
+
+            const result = validatePackagesWithExceptions(packages, configFor(true));
+            if (exceptionAccepted) {
+                expect(result.violations).toEqual([]);
+                expect(result.exceptionErrors).toEqual([]);
+                expect(result.acceptedExceptions.map(usage => usage.acceptedEdges)).toEqual([
+                    [
+                        {
+                            fromPackage: '@app/shell',
+                            fromLayer: 'ui',
+                            toPackage: '@app/infra',
+                            toLayer: 'infra',
+                        },
+                    ],
+                ]);
+            } else {
+                expect(result.violations).toEqual([violation]);
+                expect(result.acceptedExceptions).toEqual([]);
+                expect(result.exceptionErrors).toEqual([expect.stringContaining('is stale')]);
+            }
+        }
+    );
 });

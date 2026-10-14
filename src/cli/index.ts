@@ -11,7 +11,7 @@ const { version } = require('../../package.json') as { version: string };
 const banner = `${pc.bold(pc.blue('Stratify'))} ${pc.gray(`v${version}`)}`;
 
 program
-    .name('stratifyjs')
+    .name('stratify')
     .description('Enforce package layering rules in monorepos')
     .addHelpText('before', banner + '\n')
     .version(version)

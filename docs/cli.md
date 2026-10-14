@@ -48,6 +48,8 @@ The default mode is `warn` unless config overrides it. `error` fails completed v
 
 Console output includes progress, discovered package count, and either a compliance message or violation `detailedMessage` text. Accepted exceptions are listed separately with their dependency edges, owner, and reason. Progress, accepted exceptions, and success messages go to stdout; violation messages and fatal diagnostics use stderr. Color handling is CLI-specific.
 
+In `off` mode, no compliance claim is printed. With no resolved exceptions, the CLI reports that validation was skipped and omits the discovered-package count. With exceptions, it reports the discovered count and accepted exceptions, and states that ordinary violations are suppressed.
+
 ### JSON
 
 With `--format json`, completed validation writes exactly one JSON document to stdout with `violations`, `acceptedExceptions`, `totalPackages`, and `duration`. Progress is suppressed and stdout has no terminal color codes. The shape matches the [API result](api.md#result).

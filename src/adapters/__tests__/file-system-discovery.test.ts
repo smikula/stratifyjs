@@ -1,5 +1,7 @@
 import { fileURLToPath } from 'url';
-import { dirname, resolve } from 'path';
+import { dirname, join, resolve } from 'path';
+import { tmpdir } from 'os';
+import { mkdir, mkdtemp, rm, writeFile } from 'fs/promises';
 import { discoverPackages } from '../file-system-discovery.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -89,6 +91,35 @@ describe('discoverPackages', () => {
         expect(result.success).toBe(true);
         if (result.success) {
             expect(result.value.packages).toHaveLength(0);
+        }
+    });
+
+    it('parses package.json files that start with a UTF-8 byte-order mark', async () => {
+        const root = await mkdtemp(join(tmpdir(), 'stratify-bom-'));
+        try {
+            await mkdir(join(root, 'packages', 'a'), { recursive: true });
+            await writeFile(
+                join(root, 'packages', 'a', 'package.json'),
+                '\uFEFF{"name":"a","layer":"core","dependencies":{"b":"workspace:*"}}',
+                'utf-8'
+            );
+
+            const result = await discoverPackages(root, {
+                patterns: ['packages/*'],
+                protocols: ['workspace:'],
+                ignore: [],
+                dependencyTypes: ['dependencies'],
+            });
+
+            expect(result.success).toBe(true);
+            if (result.success) {
+                expect(result.value.warnings).toEqual([]);
+                expect(result.value.packages).toMatchObject([
+                    { name: 'a', layer: 'core', dependencies: ['b'] },
+                ]);
+            }
+        } finally {
+            await rm(root, { recursive: true, force: true });
         }
     });
 });

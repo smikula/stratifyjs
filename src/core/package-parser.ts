@@ -53,6 +53,7 @@ export function parsePackageJson(
     return ok({
         name: pkg.name,
         layer: typeof pkg.layer === 'string' ? pkg.layer : undefined,
+        ...(pkg.layer !== undefined && typeof pkg.layer !== 'string' ? { invalidLayer: true } : {}),
         dependencies,
         runtimeDependencies,
         path: relativePath,
@@ -63,6 +64,9 @@ export function parsePackageJson(
  * Extract internal monorepo dependencies whose version string starts
  * with one of the given protocol prefixes.
  *
+ * Each field is filtered independently, so a name is included if any selected
+ * field lists it with a matching protocol, regardless of field order.
+ *
  * @param protocols       - Prefixes to match (e.g. ["workspace:", "link:"])
  * @param dependencyTypes - Which dependency fields to check (e.g. ["dependencies", "devDependencies"])
  * @param pkg             - The full parsed package.json object
@@ -72,18 +76,20 @@ export function extractInternalDependencies(
     dependencyTypes: string[],
     pkg: Record<string, unknown>
 ): string[] {
-    const allDeps: Record<string, string> = {};
+    const internalDeps = new Set<string>();
     for (const depType of dependencyTypes) {
         const field = pkg[depType];
-        if (field && typeof field === 'object' && !Array.isArray(field)) {
-            Object.assign(allDeps, field);
+        if (!field || typeof field !== 'object' || Array.isArray(field)) {
+            continue;
         }
-    }
-    return Object.entries(allDeps)
-        .filter(
-            ([_, version]) =>
+        for (const [name, version] of Object.entries(field)) {
+            if (
                 typeof version === 'string' &&
                 protocols.some(protocol => version.startsWith(protocol))
-        )
-        .map(([name, _]) => name);
+            ) {
+                internalDeps.add(name);
+            }
+        }
+    }
+    return [...internalDeps];
 }

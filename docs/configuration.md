@@ -60,7 +60,7 @@ Each discovered package declares its layer in `package.json`:
 }
 ```
 
-A missing or empty layer produces a `missing-layer` violation. An unconfigured layer produces an `unknown-layer` violation.
+A missing, empty, or non-string layer produces a `missing-layer` violation. Non-string values are diagnosed as invalid and must be replaced with a string; the violation type is retained for compatibility. An unconfigured layer produces an `unknown-layer` violation.
 
 ### Same-layer Dependencies
 
@@ -199,9 +199,9 @@ To check build/test dependencies too, include additional fields:
 
 **Usage guidance:** keep `dependencies` selected when enforcing runtime boundaries. External registry-version dependencies are ignored when they do not match a configured prefix.
 
-### Dependency Field Shadowing
+### Repeated Dependency Names
 
-Selected fields are merged in `dependencyTypes` order **before** protocol filtering. For a repeated dependency name, the last entry wins. With `["dependencies", "devDependencies"]`, a dev entry of `"target": "^1.0.0"` hides a runtime entry of `"target": "workspace:*"`, so that edge is not checked. Reversing field order makes the workspace entry win.
+Each selected field is filtered by protocol independently. A dependency is checked if **any** selected field lists it with a configured protocol, so `dependencyTypes` order does not matter. With `["dependencies", "devDependencies"]`, a runtime entry of `"target": "workspace:*"` is checked even if `devDependencies` lists `"target": "^1.0.0"`, and the reverse also holds. Repeated names produce one edge.
 
 `parsePackageJson()` separately extracts runtime dependencies from `dependencies` for exception eligibility. See `extractInternalDependencies()` in [package-parser.ts](../src/core/package-parser.ts).
 
@@ -220,7 +220,7 @@ These limits follow from [file-system-discovery.ts](../src/adapters/file-system-
 
 | Type | Meaning |
 | --- | --- |
-| `missing-layer` | Missing or empty layer |
+| `missing-layer` | Missing, empty, or non-string layer |
 | `unknown-layer` | Declared layer is not defined in config |
 | `invalid-dependency` | Target layer is not permitted and no valid exception accepts the edge |
 | `unauthorized-layer-member` | Package is not allowed to declare its layer |
@@ -286,7 +286,7 @@ The target must appear both in the source's protocol-matching `dependencies` (ru
 
 The source must have a configured layer and pass membership checks; the target must be discovered and have a layer. Exceptions accept dependency edges, not layer-assignment or membership violations.
 
-If `dependencies` is not selected but the same target appears with a configured protocol in a selected field, such as `devDependencies`, the exception can still apply. A later registry-version entry can instead hide the runtime target from selected names and make the exception stale, as described under [field shadowing](#dependency-field-shadowing).
+If `dependencies` is not selected but the same target appears with a configured protocol in a selected field, such as `devDependencies`, the exception can still apply.
 
 Accepted usage is not hidden: the API returns `acceptedExceptions`, and both console and JSON output report it separately from ordinary violations. Each item contains a resolved exception and its `acceptedEdges`; see [API result types](api.md#accepted-exceptions).
 

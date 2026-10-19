@@ -143,7 +143,50 @@ describe('validateLayers', () => {
         } catch (e) {
             expect(e).toBeInstanceOf(StratifyError);
             expect((e as StratifyError).type).toBe('config-not-found');
+            expect((e as StratifyError).message).toBe(
+                `Config file not found: ${resolve(MONOREPO_DIR, 'nonexistent.json')}`
+            );
         }
+    });
+
+    it('labels a missing allowed-packages file correctly', async () => {
+        const validation = validateLayers({
+            workspaceRoot: MONOREPO_DIR,
+            config: {
+                layers: {
+                    ui: {
+                        allowedDependencies: ['core'],
+                        allowedPackagesFile: 'missing-allow.json',
+                    },
+                    core: { allowedDependencies: ['infra'] },
+                    infra: { allowedDependencies: [] },
+                },
+            },
+        });
+
+        await expect(validation).rejects.toMatchObject({
+            type: 'config-not-found',
+            message: `Allowed-packages file not found: ${resolve(MONOREPO_DIR, 'missing-allow.json')}`,
+        });
+    });
+
+    it('labels a missing dependency-exceptions file correctly', async () => {
+        const validation = validateLayers({
+            workspaceRoot: MONOREPO_DIR,
+            config: {
+                layers: {
+                    ui: { allowedDependencies: ['core'] },
+                    core: { allowedDependencies: ['infra'] },
+                    infra: { allowedDependencies: [] },
+                },
+                dependencyExceptionsFile: 'missing-exceptions.json',
+            },
+        });
+
+        await expect(validation).rejects.toMatchObject({
+            type: 'config-not-found',
+            message: `Dependency-exceptions file not found: ${resolve(MONOREPO_DIR, 'missing-exceptions.json')}`,
+        });
     });
 
     it('returns duration as a positive number', async () => {

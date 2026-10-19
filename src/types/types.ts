@@ -197,6 +197,8 @@ export type ViolationType =
 export interface Package {
     name: string;
     layer?: string;
+    /** The manifest declared a layer value that was not a string. */
+    invalidLayer?: boolean;
     /** Internal dependencies selected for layer validation. */
     dependencies: string[];
     /** Internal production dependencies eligible for dependency exceptions. */

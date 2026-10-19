@@ -46,7 +46,9 @@ export async function handleValidateCommand(options: CliOptions): Promise<number
                 )
             );
         } else {
-            logSuccess(`✅ Discovered ${result.totalPackages} packages\n`);
+            if (effectiveMode !== 'off' || result.acceptedExceptions.length > 0) {
+                logSuccess(`✅ Discovered ${result.totalPackages} packages\n`);
+            }
 
             if (result.acceptedExceptions.length > 0) {
                 logInfo(
@@ -64,7 +66,13 @@ export async function handleValidateCommand(options: CliOptions): Promise<number
                 }
             }
 
-            if (result.violations.length === 0) {
+            if (effectiveMode === 'off') {
+                logPlain(
+                    result.acceptedExceptions.length === 0
+                        ? 'Enforcement mode: off — validation skipped'
+                        : 'Enforcement mode: off — dependency exceptions validated; ordinary violations suppressed'
+                );
+            } else if (result.violations.length === 0) {
                 logSuccess('✅ All packages comply with layer rules!');
             } else {
                 logError(`❌ Found ${result.violations.length} layer violation(s):\n`);

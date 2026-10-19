@@ -1,0 +1,7 @@
+{
+    "type": "patch",
+    "comment": "Name the actual file kind (config, allowed-packages, or dependency-exceptions) in file not-found, read, and JSON parse errors; show the installed `stratify` command name in CLI help; drop the nonexistent bin/ entry from published files",
+    "packageName": "stratifyjs",
+    "email": "walterb@microsoft.com",
+    "dependentChangeType": "patch"
+}

@@ -52,6 +52,7 @@ describe('loadDependencyExceptions', () => {
         expect(result.success).toBe(false);
         if (!result.success) {
             expect(result.error.type).toBe('config-not-found');
+            expect(result.error).toMatchObject({ description: 'Dependency-exceptions file' });
         }
     });
 

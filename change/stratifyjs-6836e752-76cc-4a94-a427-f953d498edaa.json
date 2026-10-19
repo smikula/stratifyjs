@@ -1,0 +1,7 @@
+{
+    "type": "patch",
+    "comment": "Avoid claiming discovery or layer compliance when enforcement is off, and diagnose non-string package layer values as invalid rather than missing while preserving violation types",
+    "packageName": "stratifyjs",
+    "email": "walterb@microsoft.com",
+    "dependentChangeType": "patch"
+}

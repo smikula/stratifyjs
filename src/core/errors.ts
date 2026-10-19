@@ -7,9 +7,21 @@ export type LayerError = ConfigError | DiscoveryError;
  * Errors that can occur during configuration loading and validation.
  */
 export type ConfigError =
-    | { type: 'config-not-found'; message: string; path: string }
-    | { type: 'config-read-error'; message: string; path: string; cause?: unknown }
-    | { type: 'config-parse-error'; message: string; path: string; cause?: unknown }
+    | { type: 'config-not-found'; message: string; path: string; description?: string }
+    | {
+          type: 'config-read-error';
+          message: string;
+          path: string;
+          description?: string;
+          cause?: unknown;
+      }
+    | {
+          type: 'config-parse-error';
+          message: string;
+          path: string;
+          description?: string;
+          cause?: unknown;
+      }
     | { type: 'config-validation-error'; message: string; details?: string[] };
 
 /**
@@ -57,17 +69,25 @@ export class StratifyError extends Error {
     }
 }
 
+function fileDescription(error: { description?: string }): string {
+    return error.description ?? 'Config file';
+}
+
+function lowerFirst(text: string): string {
+    return text.charAt(0).toLowerCase() + text.slice(1);
+}
+
 /**
  * Format any LayerError into a human-readable string.
  */
 export function formatLayerError(error: LayerError): string {
     switch (error.type) {
         case 'config-not-found':
-            return `Config file not found: ${error.path}`;
+            return `${fileDescription(error)} not found: ${error.path}`;
         case 'config-read-error':
-            return `Failed to read config file (${error.path}): ${error.message}`;
+            return `Failed to read ${lowerFirst(fileDescription(error))} (${error.path}): ${error.message}`;
         case 'config-parse-error':
-            return `Invalid JSON in config file (${error.path}): ${error.message}`;
+            return `Invalid JSON in ${lowerFirst(fileDescription(error))} (${error.path}): ${error.message}`;
         case 'config-validation-error':
             return error.details
                 ? `Config validation failed:\n${error.details.map(d => `  - ${d}`).join('\n')}`

@@ -75,6 +75,37 @@ describe('handleValidateCommand', () => {
         expect(exitCode).toBe(1);
     });
 
+    it('reports skipped validation in off mode without claiming discovery or compliance', async () => {
+        const logSpy = jest.spyOn(console, 'log');
+
+        expect(await handleValidateCommand(buildCliOptions({ mode: 'off' }))).toBe(0);
+        const output = logSpy.mock.calls.flat().join('\n');
+        expect(output).toContain('Enforcement mode: off');
+        expect(output).toContain('validation skipped');
+        expect(output).not.toContain('Discovered');
+        expect(output).not.toContain('All packages comply');
+    });
+
+    it.each(['valid-config-with-exception.json', 'valid-config-with-exception-file.json'])(
+        'reports exception validation, not compliance, in off mode with %s',
+        async filename => {
+            const logSpy = jest.spyOn(console, 'log');
+
+            expect(
+                await handleValidateCommand(
+                    buildCliOptions({ mode: 'off', config: resolve(CONFIGS_DIR, filename) })
+                )
+            ).toBe(0);
+            const output = logSpy.mock.calls.flat().join('\n');
+            expect(output).toContain('Discovered 4 packages');
+            expect(output).toContain('Accepted 1 dependency exception');
+            expect(output).toContain('dependency exceptions validated');
+            expect(output).toContain('ordinary violations suppressed');
+            expect(output).not.toContain('validation skipped');
+            expect(output).not.toContain('All packages comply');
+        }
+    );
+
     it.each([
         { mode: 'warn', exitCode: 0, totalPackages: 4, violations: 1 },
         { mode: 'error', exitCode: 1, totalPackages: 4, violations: 1 },

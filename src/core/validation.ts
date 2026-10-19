@@ -158,10 +158,15 @@ export function validatePackagesWithExceptions(
             violations.push({
                 type: 'missing-layer',
                 package: pkg.name,
-                message: `Package "${pkg.name}" is missing the required "layer" field in package.json`,
+                message: pkg.invalidLayer
+                    ? `Package "${pkg.name}" has an invalid "layer" field in package.json: must be a string`
+                    : `Package "${pkg.name}" is missing the required "layer" field in package.json`,
                 detailedMessage:
-                    `🏷️  Missing Layer: "${pkg.name}"\n` +
-                    `   Add a "layer" field to ${pkg.path} to assign this package to an architectural layer.\n` +
+                    (pkg.invalidLayer
+                        ? `🏷️  Invalid Layer: "${pkg.name}"\n` +
+                          `   Set the "layer" field in ${pkg.path} to a non-empty string naming an architectural layer.\n`
+                        : `🏷️  Missing Layer: "${pkg.name}"\n` +
+                          `   Add a "layer" field to ${pkg.path} to assign this package to an architectural layer.\n`) +
                     `   Valid layers: ${validLayers}`,
             });
             continue; // Cannot validate further without layer

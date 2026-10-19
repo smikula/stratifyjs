@@ -6,6 +6,7 @@ import type { DiscoveryError } from '../core/errors.js';
 import type { Result } from '../core/result.js';
 import { ok, err } from '../core/result.js';
 import { parsePackageJson } from '../core/package-parser.js';
+import { parseJsonText } from './json-file-loader.js';
 
 type GlobResult = { ok: true; paths: string[] } | { ok: false; pattern: string; error: unknown };
 
@@ -66,7 +67,7 @@ export async function discoverPackages(
         uniquePaths.map(async relativePath => {
             const fullPath = resolve(root, relativePath);
             const content = await readFile(fullPath, 'utf-8');
-            const parsed = JSON.parse(content) as unknown;
+            const parsed = parseJsonText(content);
             return { relativePath, fullPath, parsed };
         })
     );

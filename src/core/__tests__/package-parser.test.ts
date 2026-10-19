@@ -239,4 +239,57 @@ describe('extractInternalDependencies', () => {
         });
         expect(deps).toEqual(['@my/core']);
     });
+
+    it.each([
+        {
+            fields: 'runtime workspace, dev registry',
+            order: ['dependencies', 'devDependencies'],
+            dependencies: { '@my/core': 'workspace:*' },
+            devDependencies: { '@my/core': '^1.0.0' },
+            expectedRuntime: ['@my/core'],
+        },
+        {
+            fields: 'runtime workspace, dev registry',
+            order: ['devDependencies', 'dependencies'],
+            dependencies: { '@my/core': 'workspace:*' },
+            devDependencies: { '@my/core': '^1.0.0' },
+            expectedRuntime: ['@my/core'],
+        },
+        {
+            fields: 'runtime registry, dev workspace',
+            order: ['dependencies', 'devDependencies'],
+            dependencies: { '@my/core': '^1.0.0' },
+            devDependencies: { '@my/core': 'workspace:*' },
+            expectedRuntime: [],
+        },
+        {
+            fields: 'runtime registry, dev workspace',
+            order: ['devDependencies', 'dependencies'],
+            dependencies: { '@my/core': '^1.0.0' },
+            devDependencies: { '@my/core': 'workspace:*' },
+            expectedRuntime: [],
+        },
+        {
+            fields: 'workspace in both fields',
+            order: ['dependencies', 'devDependencies'],
+            dependencies: { '@my/core': 'workspace:*' },
+            devDependencies: { '@my/core': 'workspace:^' },
+            expectedRuntime: ['@my/core'],
+        },
+    ])(
+        'selects a repeated name once regardless of field order: $fields, $order',
+        ({ order, dependencies, devDependencies, expectedRuntime }) => {
+            const content = { name: '@my/ui', dependencies, devDependencies };
+
+            expect(extractInternalDependencies(DEFAULT_PROTOCOLS, order, content)).toEqual([
+                '@my/core',
+            ]);
+            const result = parsePackageJson(content, 'packages/ui', DEFAULT_PROTOCOLS, order);
+            expect(result.success).toBe(true);
+            if (result.success) {
+                expect(result.value.dependencies).toEqual(['@my/core']);
+                expect(result.value.runtimeDependencies).toEqual(expectedRuntime);
+            }
+        }
+    );
 });

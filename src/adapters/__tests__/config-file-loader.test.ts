@@ -54,6 +54,7 @@ describe('loadConfigFromFile', () => {
         expect(result.success).toBe(false);
         if (!result.success) {
             expect(result.error.type).toBe('config-not-found');
+            expect(result.error).toMatchObject({ description: 'Config file' });
         }
     });
 
@@ -68,10 +69,27 @@ describe('loadConfigFromFile', () => {
             expect(result.success).toBe(false);
             if (!result.success) {
                 expect(result.error.type).toBe('config-parse-error');
+                expect(result.error).toMatchObject({ description: 'Config file' });
             }
         } finally {
             // Clean up temp file regardless of test outcome
             await unlink(badJsonPath).catch(() => {});
+        }
+    });
+
+    it('loads a config file that starts with a UTF-8 byte-order mark', async () => {
+        const bomPath = resolve(CONFIGS_DIR, '_temp-bom.json');
+        await writeFile(bomPath, '\uFEFF{"layers":{"core":{"allowedDependencies":[]}}}', 'utf-8');
+
+        try {
+            const result = await loadConfigFromFile(CONFIGS_DIR, '_temp-bom.json');
+
+            expect(result.success).toBe(true);
+            if (result.success) {
+                expect(Object.keys(result.value.layers)).toEqual(['core']);
+            }
+        } finally {
+            await unlink(bomPath).catch(() => {});
         }
     });
 });

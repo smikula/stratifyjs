@@ -10,6 +10,7 @@ import { StratifyError } from '../core/errors.js';
 import { validatePackagesWithExceptions } from '../core/validation.js';
 import type {
     AcceptedDependencyException,
+    DiscoveryIssue,
     StratifyConfig,
     StratifyResolvedConfig,
     Violation,
@@ -26,7 +27,7 @@ export interface ValidateLayersOptions {
     configPath?: string;
     /** Provide a pre-built config directly, skipping file loading. */
     config?: StratifyConfig;
-    /** Override the mode. Warn/error return violations; off suppresses them. */
+    /** Override the mode. Warn/error return violations and discovery issues; off suppresses both. */
     mode?: EnforcementMode;
 }
 
@@ -35,6 +36,7 @@ export interface ValidateLayersOptions {
  */
 export interface ValidateLayersResult {
     violations: Violation[];
+    discoveryIssues: DiscoveryIssue[];
     acceptedExceptions: AcceptedDependencyException[];
     totalPackages: number;
     duration: number;
@@ -44,8 +46,8 @@ export interface ValidateLayersResult {
  * Validate monorepo packages against architectural layer rules.
  *
  * @param options - Configuration and workspace options.
- * @returns Violations, accepted exception usage, total package count, and duration.
- * @throws {StratifyError} On invalid options/config, exception errors or discovery failures.
+ * @returns Violations, discovery issues, accepted exception usage, package count, and duration.
+ * @throws {StratifyError} On invalid options/config, exception errors or fatal glob failures.
  *
  * @example
  * ```ts
@@ -107,7 +109,13 @@ export async function validateLayers(
     // Off can skip discovery only when there are no exceptions to validate.
     if (config.enforcement.mode === 'off' && config.dependencyExceptions.length === 0) {
         const duration = performance.now() - startTime;
-        return { violations: [], acceptedExceptions: [], totalPackages: 0, duration };
+        return {
+            violations: [],
+            discoveryIssues: [],
+            acceptedExceptions: [],
+            totalPackages: 0,
+            duration,
+        };
     }
 
     // Discover packages
@@ -116,7 +124,19 @@ export async function validateLayers(
         throw new StratifyError(discoveryResult.error);
     }
 
-    const { packages } = discoveryResult.value;
+    const { packages, warnings } = discoveryResult.value;
+    const discoveryIssues: DiscoveryIssue[] = warnings.map(warning => ({
+        type: 'invalid-package-json',
+        paths: [warning.path],
+        message: warning.message,
+    }));
+    if (packages.length === 0) {
+        discoveryIssues.push({
+            type: 'no-packages-found',
+            paths: [workspaceRoot],
+            message: `No valid packages found. Check workspace patterns (${config.workspaces.patterns.join(', ')}), ignores, and package.json files.`,
+        });
+    }
 
     // Resolve allowed-packages for layers with membership constraints
     const allowedPackagesByLayer = await resolveAllowedPackages(config, workspaceRoot);
@@ -135,6 +155,16 @@ export async function validateLayers(
 
     return {
         violations: config.enforcement.mode === 'off' ? [] : validation.violations,
+        discoveryIssues:
+            config.enforcement.mode === 'off'
+                ? []
+                : [
+                      ...discoveryIssues,
+                      ...validation.discoveryIssues.map(issue => ({
+                          ...issue,
+                          paths: issue.paths.map(path => resolve(workspaceRoot, path)),
+                      })),
+                  ],
         acceptedExceptions: validation.acceptedExceptions,
         totalPackages: packages.length,
         duration,

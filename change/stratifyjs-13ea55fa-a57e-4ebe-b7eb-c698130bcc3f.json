@@ -1,0 +1,7 @@
+{
+    "type": "minor",
+    "comment": "Report invalid manifests, duplicate package names and empty scans as discoveryIssues; fail CLI error-mode runs on discovery issues, report them in warn mode and suppress them in off mode.",
+    "packageName": "stratifyjs",
+    "email": "walterb@microsoft.com",
+    "dependentChangeType": "patch"
+}

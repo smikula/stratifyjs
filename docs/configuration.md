@@ -139,15 +139,15 @@ See `validateAllowlistContent()` in [allowlist-file-loader.ts](../src/adapters/a
 }
 ```
 
-| Mode | CLI behavior on ordinary violations | API behavior |
+| Mode | CLI behavior on violations or discovery issues | API behavior |
 | --- | --- | --- |
-| `error` | Reports violations and exits `1` | Returns violations without throwing |
-| `warn` (default) | Reports violations and exits `0` | Returns the same violations as `error` |
-| `off` | Suppresses ordinary violations | Returns an empty violations array |
+| `error` | Reports findings and exits `1` | Returns violations and discovery issues without throwing |
+| `warn` (default) | Reports findings and exits `0` | Returns the same findings as `error` |
+| `off` | Suppresses ordinary violations and discovery issues | Returns empty `violations` and `discoveryIssues` arrays |
 
 Main config and configured dependency-exception files are resolved and validated before any `off` early return. Errors from those stages remain fatal in every mode. Invalid mode values are rejected; config validation, API overrides, and CLI parsing share `validateEnforcementMode()` in [config-schema.ts](../src/core/config-schema.ts).
 
-Allowlist files are loaded only when validation proceeds. With an empty resolved exception list, `off` skips package discovery, allowlist-file loading, and package validation. With non-empty exceptions, `off` still runs those stages, validates exceptions, and reports accepted exceptions while suppressing ordinary violations. Allowlist-file errors are fatal whenever those files are loaded.
+Allowlist files are loaded only when validation proceeds. With an empty resolved exception list, `off` skips package discovery, allowlist-file loading, and package validation. With non-empty exceptions, `off` still runs those stages, validates exceptions, and reports accepted exceptions while suppressing ordinary violations and discovery issues. Allowlist-file errors are fatal whenever those files are loaded.
 
 The ordering is implemented by `validateLayers()` in [api.ts](../src/api/api.ts). See [CLI exit codes](cli.md#exit-codes) and [API mode semantics](api.md#mode-semantics).
 
@@ -210,11 +210,14 @@ Each selected field is filtered by protocol independently. A dependency is check
 Only successfully discovered packages and protocol-matching dependencies in selected fields participate:
 
 - Edges to undiscovered packages or packages without a layer are skipped. A discovered unlayered package still receives its own `missing-layer` violation.
-- Invalid manifest JSON or a missing/invalid `name` causes the manifest to be omitted from discovery and `totalPackages`. Adapter warnings are not exposed by the current API or CLI, so omitted packages can make a scan look cleaner.
-- Duplicate names are not rejected. Dependency target lookup uses the last discovered package with that name; do not rely on discovery order.
+- An unreadable manifest, invalid JSON, or missing/invalid `name` causes the manifest to be omitted from validation and `totalPackages`, with an `invalid-package-json` discovery issue identifying its path and reason.
+- Duplicate names produce one `duplicate-package-name` discovery issue per name, listing every declaring manifest. All parsed manifests are counted and validated; dependency target lookup uses the lexicographically smallest workspace-relative manifest path (case-sensitive, not locale-based), independent of glob order.
+- Zero valid packages produces a `no-packages-found` discovery issue identifying the workspace root. Check patterns, ignores, and manifests. If all matched manifests are invalid, their individual issues are also included.
 - Default ignores exclude `**/node_modules/**`, `**/lib/**`, and `**/dist/**`. A source package under a directory named `lib` is skipped too.
 
-These limits follow from [file-system-discovery.ts](../src/adapters/file-system-discovery.ts), [package-parser.ts](../src/core/package-parser.ts), and the package-map/dependency loop in [validation.ts](../src/core/validation.ts). The API currently consumes packages but discards discovery warnings.
+Discovery issues are separate from ordinary violations in the API's `discoveryIssues` array and in CLI reports. They fail CLI runs in `error`, are reported without failing in `warn`, and are suppressed in `off`. Overlapping patterns matching the same manifest do not create duplicates. Fatal glob failures remain errors whenever discovery runs.
+
+These limits follow from [file-system-discovery.ts](../src/adapters/file-system-discovery.ts), [package-parser.ts](../src/core/package-parser.ts), and the package-map/dependency loop in [validation.ts](../src/core/validation.ts). See the [API issue shape](api.md#discovery-issues).
 
 ### Violation Types
 

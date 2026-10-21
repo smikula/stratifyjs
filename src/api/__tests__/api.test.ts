@@ -1,7 +1,13 @@
 import { fileURLToPath } from 'url';
-import { dirname, resolve } from 'path';
+import { dirname, join, resolve } from 'path';
+import { rm, writeFile } from 'fs/promises';
 import { validateLayers } from '../api.js';
 import { StratifyError } from '../../core/errors.js';
+import {
+    createDiscoveryWorkspace,
+    discoveryScenarios,
+} from '../../__tests__/fixtures/discovery-workspace.js';
+import type { DiscoveryIssue } from '../index.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -10,6 +16,112 @@ const MONOREPO_DIR = resolve(FIXTURES_DIR, 'sample-monorepo');
 const CONFIGS_DIR = resolve(FIXTURES_DIR, 'configs');
 
 describe('validateLayers', () => {
+    describe.each(discoveryScenarios)('%s discovery issues', scenario => {
+        it.each(['error', 'warn', 'off'] as const)(
+            'applies %s mode consistently for config and overrides',
+            async mode => {
+                const { root, config } = await createDiscoveryWorkspace(scenario);
+                try {
+                    for (const options of [
+                        { config: { ...config, enforcement: { mode } } },
+                        { configPath: 'stratify.config.json', mode },
+                    ]) {
+                        const result = await validateLayers({ workspaceRoot: root, ...options });
+                        const issues: DiscoveryIssue[] = result.discoveryIssues;
+                        expect(result.violations).toEqual([]);
+                        if (mode === 'off') {
+                            expect(issues).toEqual([]);
+                            expect(result.totalPackages).toBe(0);
+                        } else if (scenario === 'duplicate') {
+                            expect(result.totalPackages).toBe(4);
+                            expect(issues).toEqual([
+                                {
+                                    type: 'duplicate-package-name',
+                                    packageName: 'duplicate',
+                                    paths: ['a', 'b', 'c'].map(directory =>
+                                        join(root, 'packages', directory, 'package.json')
+                                    ),
+                                    message: expect.stringContaining('"duplicate"'),
+                                },
+                            ]);
+                        } else if (scenario === 'empty') {
+                            expect(result.totalPackages).toBe(0);
+                            expect(issues).toEqual([
+                                {
+                                    type: 'no-packages-found',
+                                    paths: [root],
+                                    message: expect.stringContaining('packages/*'),
+                                },
+                            ]);
+                        } else {
+                            expect(result.totalPackages).toBe(1);
+                            expect(issues).toEqual([
+                                {
+                                    type: 'invalid-package-json',
+                                    paths: [join(root, 'packages', 'broken', 'package.json')],
+                                    message: expect.any(String),
+                                },
+                            ]);
+                        }
+                    }
+                } finally {
+                    await rm(root, { recursive: true, force: true });
+                }
+            }
+        );
+    });
+
+    it('reports both an invalid manifest and zero valid packages', async () => {
+        const { root, config } = await createDiscoveryWorkspace('invalid-json');
+        try {
+            await rm(join(root, 'packages', 'healthy', 'package.json'));
+            const result = await validateLayers({ workspaceRoot: root, config });
+            expect(result.totalPackages).toBe(0);
+            expect(result.discoveryIssues.map(issue => issue.type)).toEqual([
+                'invalid-package-json',
+                'no-packages-found',
+            ]);
+        } finally {
+            await rm(root, { recursive: true, force: true });
+        }
+    });
+
+    it('suppresses discovery issues even when off mode must discover packages for exceptions', async () => {
+        const { root, config } = await createDiscoveryWorkspace('duplicate');
+        try {
+            await writeFile(
+                join(root, 'packages', 'healthy', 'package.json'),
+                JSON.stringify({
+                    name: 'healthy',
+                    layer: 'core',
+                    dependencies: { duplicate: 'workspace:*' },
+                })
+            );
+            const result = await validateLayers({
+                workspaceRoot: root,
+                mode: 'off',
+                config: {
+                    ...config,
+                    layers: { core: { allowedDependencies: [] } },
+                    dependencyExceptions: [
+                        {
+                            fromPackage: 'healthy',
+                            toPackage: 'duplicate',
+                            owner: 'team',
+                            reason: 'migration',
+                        },
+                    ],
+                },
+            });
+            expect(result.totalPackages).toBe(4);
+            expect(result.discoveryIssues).toEqual([]);
+            expect(result.violations).toEqual([]);
+            expect(result.acceptedExceptions).toHaveLength(1);
+        } finally {
+            await rm(root, { recursive: true, force: true });
+        }
+    });
+
     it.each([
         { mode: 'bogus' },
         { mode: '' },

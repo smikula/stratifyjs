@@ -10,6 +10,93 @@ describe('validatePackages', () => {
         config = createTestConfig();
     });
 
+    it.each(['error', 'warn', 'off'] as const)(
+        'reports every duplicate path and uses a stable target in core regardless of %s mode',
+        mode => {
+            config.enforcement.mode = mode;
+            const packages = [
+                createTestPackage({
+                    name: 'source',
+                    layer: 'ui',
+                    dependencies: ['duplicate'],
+                }),
+                createTestPackage({
+                    name: 'duplicate',
+                    layer: 'core',
+                    path: 'packages/z/package.json',
+                }),
+                createTestPackage({
+                    name: 'duplicate',
+                    layer: 'infra',
+                    path: 'packages/a/package.json',
+                }),
+                createTestPackage({
+                    name: 'duplicate',
+                    layer: undefined,
+                    path: 'packages/m/package.json',
+                }),
+            ];
+            for (const input of [packages, [...packages].reverse()]) {
+                const result = validatePackagesWithExceptions(input, config);
+                expect(result.discoveryIssues).toEqual([
+                    {
+                        type: 'duplicate-package-name',
+                        packageName: 'duplicate',
+                        paths: [
+                            'packages/a/package.json',
+                            'packages/m/package.json',
+                            'packages/z/package.json',
+                        ],
+                        message: expect.stringContaining('"duplicate"'),
+                    },
+                ]);
+                expect(result.violations).toHaveLength(2);
+                expect(result.violations).toEqual(
+                    expect.arrayContaining([
+                        expect.objectContaining({
+                            type: 'invalid-dependency',
+                            package: 'source',
+                            details: expect.objectContaining({ toLayer: 'infra' }),
+                        }),
+                        expect.objectContaining({ type: 'missing-layer', package: 'duplicate' }),
+                    ])
+                );
+            }
+        }
+    );
+
+    it('keeps runtime exception eligibility separate for duplicate source manifests', () => {
+        config.dependencyExceptions = [
+            { fromPackage: 'duplicate', toPackage: 'target', owner: 'team', reason: 'migration' },
+        ];
+        const result = validatePackagesWithExceptions(
+            [
+                createTestPackage({
+                    name: 'duplicate',
+                    layer: 'ui',
+                    path: 'a/package.json',
+                    dependencies: ['target'],
+                    runtimeDependencies: ['target'],
+                }),
+                createTestPackage({
+                    name: 'duplicate',
+                    layer: 'ui',
+                    path: 'b/package.json',
+                    dependencies: ['target'],
+                    runtimeDependencies: [],
+                }),
+                createTestPackage({ name: 'target', layer: 'infra' }),
+            ],
+            config
+        );
+        expect(result.discoveryIssues).toHaveLength(1);
+        expect(result.exceptionErrors).toEqual([]);
+        expect(result.acceptedExceptions[0].acceptedEdges).toHaveLength(1);
+        expect(result.violations).toMatchObject([
+            { type: 'invalid-dependency', package: 'duplicate' },
+        ]);
+    });
+
     // ── All valid ──────────────────────────────────────────────────────
     it('returns no violations when all packages are valid', () => {
         const packages: Package[] = [

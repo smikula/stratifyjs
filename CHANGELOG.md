@@ -1,8 +1,20 @@
 # Change Log - stratifyjs
 
-<!-- This log was last generated on Tue, 08 Sep 2026 21:10:39 GMT and should not be manually modified. -->
+<!-- This log was last generated on Wed, 21 Oct 2026 04:19:18 GMT and should not be manually modified. -->
 
 <!-- Start content -->
+
+## 4.0.1
+
+Wed, 21 Oct 2026 04:19:18 GMT
+
+### Patches
+
+- Accept config, allowlist, exception, and package.json files that start with a UTF-8 byte-order mark instead of failing or silently skipping the package (walterb@microsoft.com)
+- Name the actual file kind (config, allowed-packages, or dependency-exceptions) in file not-found, read, and JSON parse errors; show the installed `stratify` command name in CLI help; drop the nonexistent bin/ entry from published files (walterb@microsoft.com)
+- Fix JSON CLI output to emit only the validation result on stdout, and reject invalid CLI mode/format values and API mode overrides. Clarify enforcement, scan coverage, and dependency-exception behavior. (walterb@microsoft.com)
+- Avoid claiming discovery or layer compliance when enforcement is off, and diagnose non-string package layer values as invalid rather than missing while preserving violation types (walterb@microsoft.com)
+- Check internal dependencies listed in any selected dependency field, regardless of dependencyTypes order, so a registry-version entry in another field no longer hides a workspace dependency (walterb@microsoft.com)
 
 ## 4.0.0
 

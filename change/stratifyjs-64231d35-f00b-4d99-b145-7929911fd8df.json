@@ -1,7 +1,0 @@
-{
-    "type": "patch",
-    "comment": "Fix JSON CLI output to emit only the validation result on stdout, and reject invalid CLI mode/format values and API mode overrides. Clarify enforcement, scan coverage, and dependency-exception behavior.",
-    "packageName": "stratifyjs",
-    "email": "walterb@microsoft.com",
-    "dependentChangeType": "patch"
-}

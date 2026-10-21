@@ -1,7 +1,0 @@
-{
-    "type": "patch",
-    "comment": "Accept config, allowlist, exception, and package.json files that start with a UTF-8 byte-order mark instead of failing or silently skipping the package",
-    "packageName": "stratifyjs",
-    "email": "walterb@microsoft.com",
-    "dependentChangeType": "patch"
-}

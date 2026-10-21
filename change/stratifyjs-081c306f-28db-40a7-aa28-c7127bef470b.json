@@ -1,7 +1,0 @@
-{
-    "type": "patch",
-    "comment": "Check internal dependencies listed in any selected dependency field, regardless of dependencyTypes order, so a registry-version entry in another field no longer hides a workspace dependency",
-    "packageName": "stratifyjs",
-    "email": "walterb@microsoft.com",
-    "dependentChangeType": "patch"
-}

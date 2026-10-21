@@ -40,14 +40,14 @@ Production source changes outside those patterns still need a change file, even 
 
 ## Versioning and Release
 
-The checked-in configuration and workflows define separate versioning and publishing steps:
+Versions are bumped through a manual pull request, not automatically after merge. Change files accumulate in `change/` on `master` until a maintainer opens a bump pull request, and merged changes are not released until that pull request merges and a GitHub Release is published.
 
-1. The [version-bump workflow](.github/workflows/version-bump.yml) runs on pushes to `master`, except pushes by `github-actions[bot]`. It installs dependencies and runs `yarn beachball bump` to consume change files and update version/changelog metadata, then commits and pushes if files changed.
-2. [beachball.config.cjs](beachball.config.cjs) selects Markdown changelog generation and disables Beachball's own publishing, pushing, and Git tagging (`gitTags: false`). The version-bump workflow performs its Git push separately.
-3. A maintainer creates GitHub Releases and their associated tags manually through GitHub's web interface.
-4. The [publish workflow](.github/workflows/publish.yml) runs when a GitHub Release is published or when manually dispatched. It installs dependencies, builds, tests, and runs `npm publish`. The package's `prepublishOnly` hook also runs `yarn build` and `yarn test`.
+1. Contributors add Beachball change files to their pull requests as described in [Change Files](#change-files).
+2. A maintainer creates a branch from an up-to-date `master` and runs `yarn beachball bump`. This consumes the pending change files, updates the `version` in [package.json](package.json), and prepends an entry to [CHANGELOG.md](CHANGELOG.md). Review the generated version and changelog, then open a pull request with the result. Run `yarn checkchange` before opening it; if Beachball reports a missing change file, add one of type `none` with `yarn change`. The 4.0.0 bump ([#14](https://github.com/smikula/stratifyjs/pull/14)) included such a file, but whether Beachball requires one for a bump-only change has not been confirmed.
+3. After the bump pull request merges, a maintainer creates a GitHub Release and its associated tag (for example, `v4.0.0`) manually through GitHub's web interface, using the new version.
+4. Publishing the release triggers the [publish workflow](.github/workflows/publish.yml), which can also be dispatched manually. It installs dependencies, builds, tests, and runs `npm publish`. The package's `prepublishOnly` hook also runs `yarn build` and `yarn test`.
 
-No checked-in workflow creates GitHub Releases or tags. The npm authorization settings and whether these workflows have successfully run cannot be confirmed from these files alone.
+[beachball.config.cjs](beachball.config.cjs) selects Markdown changelog generation and disables Beachball's own publishing, pushing, and Git tagging (`gitTags: false`). No checked-in workflow creates GitHub Releases or tags. The [version-bump workflow](.github/workflows/version-bump.yml) remains in the repository but is disabled on GitHub, so do not rely on it.
 
 ## Architecture
 

@@ -91,7 +91,7 @@ This document describes the internal architecture of the `stratifyjs` package an
 | `config-schema.ts`   | Runtime config and exception-schema validation (`validateConfigSchema()`, `validateDependencyExceptions()`). `validateEnforcementMode()` is shared by config validation, API overrides, and CLI parsing. |
 | `config-defaults.ts` | `applyDefaults()` for enforcement and all workspace fields, including `dependencyTypes`, plus the default empty exception list. Workspace arrays replace defaults rather than extend them. |
 | `rules.ts`           | Individual rule predicates: `hasRequiredLayer()`, `isKnownLayer()`, `isDependencyAllowed()`, `isPackageAllowedInLayer()`. |
-| `validation.ts`      | `validatePackagesWithExceptions()` returns `violations`, `acceptedExceptions`, and `exceptionErrors`; applies package rules and validates exception usage. `validatePackages()` is a violations-only wrapper. Populates `detailedMessage` on violations. |
+| `validation.ts`      | `validatePackagesWithExceptions()` returns `violations`, duplicate-name `discoveryIssues`, `acceptedExceptions`, and `exceptionErrors`; applies package rules and validates exception usage. `validatePackages()` is a violations-only wrapper. Populates `detailedMessage` on violations. |
 | `package-parser.ts`  | Parses `package.json` into `Package` objects. Extracts selected internal `dependencies` and separate production `runtimeDependencies`, filtering by configured protocols. |
 | `dependency-exception-label.ts` | Formats exception labels with scope and configuration/file position for diagnostics. |
 
@@ -109,7 +109,7 @@ This document describes the internal architecture of the `stratifyjs` package an
 
 | Module     | Purpose                                                                                                                                                                 |
 | ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `types.ts` | Shared domain types for packages, layers, config, violations, enforcement/output modes, exception scopes, resolved exceptions, and accepted edges/usages. `StratifyConfig` models mutually exclusive inline/file-backed exceptions. API option/result types live in `api.ts`; adapter/core result types live with their modules. |
+| `types.ts` | Shared domain types for packages, layers, config, violations, discovery issues, enforcement/output modes, exception scopes, resolved exceptions, and accepted edges/usages. `StratifyConfig` models mutually exclusive inline/file-backed exceptions. API option/result types live in `api.ts`; adapter/core result types live with their modules. |
 
 ## Layer Dependency Policy
 
@@ -142,7 +142,7 @@ Library API: validateLayers(options)
        ├──► Apply validated options.mode override
        │
        ├──► If mode is off AND resolved exception list is empty:
-       │         return { violations: [], acceptedExceptions: [],
+       │         return { violations: [], discoveryIssues: [], acceptedExceptions: [],
        │                  totalPackages: 0, duration }
        │
        ├──► Adapter: discoverPackages()
@@ -150,7 +150,8 @@ Library API: validateLayers(options)
        │         ├──► glob: find manifests using patterns and ignores
        │         ├──► fs: read each file
        │         ├──► Core: parsePackageJson() → Package or parse error
-       │         └──► { packages, warnings } (API uses packages only)
+       │         └──► { packages, warnings } (API maps warnings to discovery issues)
+       │                   No valid packages → no-packages-found issue
        │
        ├──► Resolve membership allowlists
        │         │
@@ -162,14 +163,14 @@ Library API: validateLayers(options)
        │         │
        │         ├──► Package layer/membership/dependency rules
        │         ├──► Match eligible runtime edges to exceptions
-       │         └──► { violations, acceptedExceptions, exceptionErrors }
+       │         └──► { violations, discoveryIssues, acceptedExceptions, exceptionErrors }
        │
        ├──► Non-empty exceptionErrors → throw StratifyError
        │         (type: config-validation-error; applies in every mode)
        │
-       └──► ValidateLayersResult { violations, acceptedExceptions,
+       └──► ValidateLayersResult { violations, discoveryIssues, acceptedExceptions,
                                   totalPackages, duration }
-                 (off suppresses ordinary violations only)
+                 (off suppresses ordinary violations and discovery issues)
                          │
                          ▼
 CLI: console report or JSON result → exit code
@@ -177,9 +178,9 @@ CLI: console report or JSON result → exit code
 
 Schema validation checks exception shapes and duplicate scopes; package validation checks referenced packages, real runtime edges, overlapping matches, and stale/unnecessary/unused exceptions. An edge can be accepted only when its target is both a protocol-matching runtime dependency and a selected internal dependency, and the edge would otherwise violate the layer rules. An accepted exception records its resolved scope and `acceptedEdges`.
 
-`warn` and `error` return the same ordinary violations through the API. The CLI alone fails completed validation when the effective mode is `error` and violations remain. `off` with non-empty exceptions still runs discovery, allowlist resolution, and exception-aware validation, then returns accepted exceptions with an empty violations array. The empty-exception early return skips discovery, allowlist-file loading, and package validation, but occurs **after** config and exception-file resolution.
+`warn` and `error` return the same ordinary violations and discovery issues through the API. The API applies `off` suppression; the CLI alone fails completed validation when the effective mode is `error` and either findings array is non-empty. `off` with non-empty exceptions still runs discovery, allowlist resolution, and exception-aware validation, then returns accepted exceptions with empty violations and discovery-issues arrays. The empty-exception early return skips discovery, allowlist-file loading, and package validation, but occurs **after** config and exception-file resolution.
 
-Console mode reports violations through `detailedMessage` and lists accepted exceptions separately. JSON mode suppresses progress and writes only the result document to stdout, including when ordinary violations cause exit code `1`. Fatal CLI failures emit stderr diagnostics, leave JSON stdout empty, and exit `1`.
+Console mode reports violations through `detailedMessage` and lists discovery issues (type, message, paths) and accepted exceptions separately. It claims compliance only when both findings arrays are empty. JSON mode suppresses progress and writes only the result document to stdout, including when violations or discovery issues cause exit code `1`. Fatal CLI failures emit stderr diagnostics, leave JSON stdout empty, and exit `1`.
 
 ## Error Handling
 
@@ -195,7 +196,7 @@ Error types are organized as tagged unions for exhaustive handling:
 -   **`DiscoveryError`**: `glob-failed`, `package-parse-error`
 -   **`LayerError`**: `ConfigError | DiscoveryError` (top-level union)
 
-Rule predicates return booleans. `validatePackagesWithExceptions()` returns a `PackageValidationResult` with arrays of ordinary violations, accepted usages, and exception-error strings rather than a `Result`.
+Rule predicates return booleans. `validatePackagesWithExceptions()` returns a `PackageValidationResult` with arrays of ordinary violations, duplicate-name discovery issues, accepted usages, and exception-error strings rather than a `Result`.
 
 **At the public API boundary**, `Result` failures and non-empty exception errors are converted to a thrown `StratifyError`. Ordinary violations remain result data, even in `error` mode. **At the CLI option boundary**, `parseCliOptions()` also throws `StratifyError` for invalid mode/format values; the entry point catches these errors and sets exit code `1`. This describes expected failure paths, not a guarantee that arbitrary runtime exceptions cannot occur.
 
@@ -209,7 +210,9 @@ try {
 }
 ```
 
-Non-fatal issues during package discovery (e.g., an unreadable or malformed manifest, or a missing package name) are collected as `DiscoveryWarning` objects and the manifest is omitted. The API currently discards these warnings, so neither the public result nor CLI output exposes them. A glob failure instead returns an error result that the API throws.
+Individual unreadable or invalid manifests are collected as adapter `DiscoveryWarning` objects and omitted from packages. The API maps warnings to `invalid-package-json` discovery issues and adds `no-packages-found` when no valid manifests remain. Core validation reports one `duplicate-package-name` issue per repeated name with all declaring paths. Every parsed manifest is still validated, but dependency targets resolve to the lexicographically smallest workspace-relative manifest path (case-sensitive, not locale-based), independent of discovery order. Runtime exception eligibility is indexed by package object rather than name so duplicate sources cannot overwrite each other's runtime edges.
+
+The API returns these issues separately as the public `DiscoveryIssue` union, with absolute paths, suppressing them in `off`. They are findings, not new `ViolationType` values or thrown errors. A glob failure instead returns an error result that the API throws whenever discovery runs.
 
 ## Import Rules
 
@@ -231,10 +234,10 @@ The CLI imports `StratifyError` from `core/errors.ts` for error construction and
 
 1. **Expected failures as data, `throw` at consumer boundaries** — parsers and loaders use `Result`; package validation returns violations and exception errors separately. The API converts expected failures to `StratifyError`, while ordinary violations remain available for caller-defined enforcement.
 2. **Configurable protocol detection** — by default only `workspace:` dependencies are checked; users can opt in to `link:`, `portal:`, `file:`, or any future protocol via `workspaces.protocols`. External npm-registry dependencies remain out of scope; layers govern internal monorepo architecture only.
-3. **`Promise.allSettled` for discovery** — one broken `package.json` doesn't abort the entire scan; it is skipped with an adapter-level warning that the API currently discards.
+3. **`Promise.allSettled` for discovery** — one broken `package.json` doesn't abort the entire scan; it is skipped with an adapter warning exposed by the API as a mode-governed discovery issue.
 4. **Explicit configuration with defaults** — config comes from a JSON file or an API `options.config` object; an optional mode override takes precedence over the resolved config mode. Omitted fields use core defaults.
 5. **Self-describing violations** — each `Violation` carries a `detailedMessage` with rich, actionable context. No separate formatters needed; consumers loop and print.
-6. **Minimal public API surface** — `src/api/index.ts` exports `validateLayers`, `StratifyError`, and the types `ValidateLayersOptions`, `ValidateLayersResult`, `AcceptedDependencyException`, `DependencyException`, `EnforcementMode`, `StratifyConfig`, and `Violation`. Core plumbing such as `Result`, `validatePackagesWithExceptions`, and `validateEnforcementMode` is not exported through the package entry point.
+6. **Minimal public API surface** — `src/api/index.ts` exports `validateLayers`, `StratifyError`, and the types `ValidateLayersOptions`, `ValidateLayersResult`, `AcceptedDependencyException`, `DependencyException`, `DiscoveryIssue`, `EnforcementMode`, `StratifyConfig`, and `Violation`. Core plumbing such as `Result`, `validatePackagesWithExceptions`, and `validateEnforcementMode` is not exported through the package entry point.
 
 ## Self-Applied Configuration
 

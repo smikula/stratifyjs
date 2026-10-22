@@ -33,18 +33,7 @@ export async function handleValidateCommand(options: CliOptions): Promise<number
         const result = await validateLayers(toLibraryOptions(options));
 
         if (options.format === 'json') {
-            logPlain(
-                JSON.stringify(
-                    {
-                        violations: result.violations,
-                        acceptedExceptions: result.acceptedExceptions,
-                        totalPackages: result.totalPackages,
-                        duration: result.duration,
-                    },
-                    null,
-                    2
-                )
-            );
+            logPlain(JSON.stringify(result, null, 2));
         } else {
             if (effectiveMode !== 'off' || result.acceptedExceptions.length > 0) {
                 logSuccess(`✅ Discovered ${result.totalPackages} packages\n`);
@@ -66,27 +55,46 @@ export async function handleValidateCommand(options: CliOptions): Promise<number
                 }
             }
 
+            if (result.discoveryIssues.length > 0) {
+                logError(`Found ${result.discoveryIssues.length} discovery issue(s):\n`);
+                for (const issue of result.discoveryIssues) {
+                    logError(`[${issue.type}] ${issue.message}`);
+                    for (const path of issue.paths) {
+                        logError(`   ${path}`);
+                    }
+                    logPlain('');
+                }
+            }
+
             if (effectiveMode === 'off') {
                 logPlain(
                     result.acceptedExceptions.length === 0
                         ? 'Enforcement mode: off — validation skipped'
-                        : 'Enforcement mode: off — dependency exceptions validated; ordinary violations suppressed'
+                        : 'Enforcement mode: off — dependency exceptions validated; ordinary violations suppressed; discovery issues suppressed'
                 );
             } else if (result.violations.length === 0) {
-                logSuccess('✅ All packages comply with layer rules!');
+                if (result.discoveryIssues.length === 0) {
+                    logSuccess('✅ All packages comply with layer rules!');
+                }
             } else {
                 logError(`❌ Found ${result.violations.length} layer violation(s):\n`);
                 for (const v of result.violations) {
                     logError(v.detailedMessage);
                     logPlain('');
                 }
-                if (effectiveMode === 'warn') {
-                    logPlain('⚠️  Enforcement mode: warn — not failing build');
-                }
+            }
+            if (
+                effectiveMode === 'warn' &&
+                (result.violations.length > 0 || result.discoveryIssues.length > 0)
+            ) {
+                logPlain('⚠️  Enforcement mode: warn — not failing build');
             }
         }
 
-        if (effectiveMode === 'error' && result.violations.length > 0) {
+        if (
+            effectiveMode === 'error' &&
+            (result.violations.length > 0 || result.discoveryIssues.length > 0)
+        ) {
             return 1;
         }
 

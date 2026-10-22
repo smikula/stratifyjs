@@ -1,6 +1,7 @@
 import type {
     AcceptedDependencyEdge,
     AcceptedDependencyException,
+    DiscoveryIssue,
     Package,
     ResolvedDependencyException,
     StratifyResolvedConfig,
@@ -32,6 +33,7 @@ export function validatePackages(
 
 export interface PackageValidationResult {
     violations: Violation[];
+    discoveryIssues: DiscoveryIssue[];
     acceptedExceptions: AcceptedDependencyException[];
     exceptionErrors: string[];
 }
@@ -57,7 +59,31 @@ export function validatePackagesWithExceptions(
     allowedPackagesByLayer: Map<string, Set<string>> = new Map()
 ): PackageValidationResult {
     const violations: Violation[] = [];
-    const packageMap = new Map(packages.map(pkg => [pkg.name, pkg]));
+    const packageMap = new Map<string, Package>();
+    const duplicatePaths = new Map<string, string[]>();
+    for (const pkg of packages) {
+        const existing = packageMap.get(pkg.name);
+        if (existing === undefined) {
+            packageMap.set(pkg.name, pkg);
+        } else {
+            const paths = duplicatePaths.get(pkg.name);
+            if (paths === undefined) {
+                duplicatePaths.set(pkg.name, [existing.path, pkg.path]);
+            } else {
+                paths.push(pkg.path);
+            }
+            // Keep target lookup deterministic without skipping validation of any manifest.
+            if (pkg.path < existing.path) {
+                packageMap.set(pkg.name, pkg);
+            }
+        }
+    }
+    const discoveryIssues: DiscoveryIssue[] = [...duplicatePaths].map(([packageName, paths]) => ({
+        type: 'duplicate-package-name',
+        packageName,
+        paths: paths.sort(),
+        message: `Multiple package.json files declare the name "${packageName}". Give each package a unique name.`,
+    }));
     const validLayers = Object.keys(config.layers).join(', ');
     const exceptionErrors: string[] = [];
     const exceptionSource =
@@ -126,13 +152,13 @@ export function validatePackagesWithExceptions(
         }
     }
 
-    const runtimeDependenciesByPackage = new Map<string, Set<string>>();
+    const runtimeDependenciesByPackage = new Map<Package, Set<string>>();
     if (exceptionStates.length > 0) {
         // Record real runtime edges independently of rule eligibility so stale and unused
         // exceptions can be distinguished after normal validation.
         for (const pkg of packages) {
             const runtimeDependencies = new Set(pkg.runtimeDependencies ?? pkg.dependencies);
-            runtimeDependenciesByPackage.set(pkg.name, runtimeDependencies);
+            runtimeDependenciesByPackage.set(pkg, runtimeDependencies);
             for (const depName of pkg.dependencies) {
                 if (!runtimeDependencies.has(depName) || !packageMap.has(depName)) {
                     continue;
@@ -217,7 +243,7 @@ export function validatePackagesWithExceptions(
                 continue; // Skip dependencies that are not discovered or have no layer
             }
 
-            const isRuntimeDependency = runtimeDependenciesByPackage.get(pkg.name)?.has(depName);
+            const isRuntimeDependency = runtimeDependenciesByPackage.get(pkg)?.has(depName);
             const packageState = isRuntimeDependency
                 ? exceptionIndex.byTargetAndPackage.get(depName)?.get(pkg.name)
                 : undefined;
@@ -300,6 +326,7 @@ export function validatePackagesWithExceptions(
 
     return {
         violations,
+        discoveryIssues,
         acceptedExceptions: exceptionStates
             .filter(state => state.acceptedEdges.length > 0)
             .map(state => ({

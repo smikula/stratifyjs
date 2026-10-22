@@ -166,6 +166,28 @@ export interface EnforcementConfig {
 }
 
 /**
+ * A package-discovery problem, separate from architectural violations.
+ * Public API paths are absolute; no-packages-found identifies the workspace root.
+ */
+export type DiscoveryIssue =
+    | {
+          type: 'invalid-package-json';
+          paths: string[];
+          message: string;
+      }
+    | {
+          type: 'duplicate-package-name';
+          packageName: string;
+          paths: string[];
+          message: string;
+      }
+    | {
+          type: 'no-packages-found';
+          paths: string[];
+          message: string;
+      };
+
+/**
  * A single validation violation
  */
 export interface Violation {

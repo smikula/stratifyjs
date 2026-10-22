@@ -1,8 +1,13 @@
 import { jest } from '@jest/globals';
 import { fileURLToPath } from 'url';
-import { dirname, resolve } from 'path';
+import { dirname, join, resolve } from 'path';
+import { rm, writeFile } from 'fs/promises';
 import { handleValidateCommand } from '../command-handler.js';
 import type { CliOptions } from '../options.js';
+import {
+    createDiscoveryWorkspace,
+    discoveryScenarios,
+} from '../../__tests__/fixtures/discovery-workspace.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -32,6 +37,82 @@ afterEach(() => {
 });
 
 describe('handleValidateCommand', () => {
+    describe.each(discoveryScenarios)('%s discovery issues', scenario => {
+        it.each(['error', 'warn', 'off'] as const)(
+            'reports console and JSON results with the correct exit code in %s mode',
+            async mode => {
+                const { root, config } = await createDiscoveryWorkspace(scenario);
+                try {
+                    const logSpy = jest.spyOn(console, 'log');
+                    const errorSpy = jest.spyOn(console, 'error');
+                    for (const format of ['console', 'json'] as const) {
+                        for (const override of [undefined, mode]) {
+                            await writeFile(
+                                join(root, 'stratify.config.json'),
+                                JSON.stringify({
+                                    ...config,
+                                    enforcement: {
+                                        mode:
+                                            override === undefined
+                                                ? mode
+                                                : mode === 'error'
+                                                  ? 'warn'
+                                                  : 'error',
+                                    },
+                                })
+                            );
+                            logSpy.mockClear();
+                            errorSpy.mockClear();
+                            const exitCode = await handleValidateCommand(
+                                buildCliOptions({
+                                    root,
+                                    config: 'stratify.config.json',
+                                    mode: override,
+                                    format,
+                                })
+                            );
+                            expect(exitCode).toBe(mode === 'error' ? 1 : 0);
+                            const stdout = logSpy.mock.calls.flat().join('\n');
+                            const stderr = errorSpy.mock.calls.flat().join('\n');
+                            if (format === 'json') {
+                                const result = JSON.parse(stdout);
+                                expect(logSpy).toHaveBeenCalledTimes(1);
+                                expect(errorSpy).not.toHaveBeenCalled();
+                                expect(result.violations).toEqual([]);
+                                expect(result.discoveryIssues).toHaveLength(mode === 'off' ? 0 : 1);
+                                if (mode !== 'off') {
+                                    expect(result.discoveryIssues[0].paths[0]).toContain(root);
+                                }
+                            } else {
+                                expect(stdout).not.toContain('All packages comply');
+                                if (mode === 'off') {
+                                    expect(stderr).toBe('');
+                                    expect(stdout).not.toContain('discovery issue');
+                                } else {
+                                    expect(stderr).toContain('1 discovery issue(s)');
+                                    expect(stderr).toContain(root);
+                                    if (scenario === 'duplicate') {
+                                        expect(stderr).toContain('"duplicate"');
+                                        for (const directory of ['a', 'b', 'c']) {
+                                            expect(stderr).toContain(
+                                                join(root, 'packages', directory, 'package.json')
+                                            );
+                                        }
+                                    }
+                                    expect(stdout.includes('not failing build')).toBe(
+                                        mode === 'warn'
+                                    );
+                                }
+                            }
+                        }
+                    }
+                } finally {
+                    await rm(root, { recursive: true, force: true });
+                }
+            }
+        );
+    });
+
     it('returns exit code 1 when config mode is error and violations exist', async () => {
         // valid-config.json has mode: 'error'; sample-monorepo has a violation.
         const exitCode = await handleValidateCommand(buildCliOptions());
@@ -123,6 +204,7 @@ describe('handleValidateCommand', () => {
         expect(result.totalPackages).toBe(expected.totalPackages);
         expect(result.violations).toHaveLength(expected.violations);
         expect(result.acceptedExceptions).toEqual([]);
+        expect(result.discoveryIssues).toEqual([]);
         expect(result.duration).toEqual(expect.any(Number));
         expect(errorSpy).not.toHaveBeenCalled();
     });

@@ -40,21 +40,21 @@ stratify --format json
 stratify -c stratify.config.json -r ../.. -m error --format console
 ```
 
-The default mode is `warn` unless config overrides it. `error` fails completed validation when ordinary violations remain; `warn` reports them without failing. `off` suppresses ordinary violations but does not disable dependency-exception checks. See [enforcement](configuration.md#enforcement) for the exact exception/allowlist loading order.
+The default mode is `warn` unless config overrides it. `error` fails completed validation when ordinary violations or discovery issues remain; `warn` reports both without failing. `off` suppresses both but does not disable dependency-exception checks. See [enforcement](configuration.md#enforcement) for the exact exception/allowlist loading order.
 
 ## Output
 
 ### Console
 
-Console output includes progress, discovered package count, and either a compliance message or violation `detailedMessage` text. Accepted exceptions are listed separately with their dependency edges, owner, and reason. Progress, accepted exceptions, and success messages go to stdout; violation messages and fatal diagnostics use stderr. Color handling is CLI-specific.
+Console output includes progress, discovered package count, violation `detailedMessage` text, and a separate discovery-issue report with issue types, messages, and paths. Discovery issues cover unreadable/invalid manifests, duplicate names (with every declaring path), and zero valid packages. A compliance message is printed only when both findings arrays are empty. Accepted exceptions are listed separately with their dependency edges, owner, and reason. Progress, accepted exceptions, and success messages go to stdout; violations, discovery issues, and fatal diagnostics use stderr, including in `warn` mode. Color handling is CLI-specific.
 
-In `off` mode, no compliance claim is printed. With no resolved exceptions, the CLI reports that validation was skipped and omits the discovered-package count. With exceptions, it reports the discovered count and accepted exceptions, and states that ordinary violations are suppressed.
+In `off` mode, no compliance claim is printed. With no resolved exceptions, the CLI reports that validation was skipped and omits the discovered-package count. With exceptions, it reports the discovered count and accepted exceptions, and states that ordinary violations and discovery issues are suppressed.
 
 ### JSON
 
-With `--format json`, completed validation writes exactly one JSON document to stdout with `violations`, `acceptedExceptions`, `totalPackages`, and `duration`. Progress is suppressed and stdout has no terminal color codes. The shape matches the [API result](api.md#result).
+With `--format json`, completed validation writes exactly one JSON document to stdout with `violations`, `discoveryIssues`, `acceptedExceptions`, `totalPackages`, and `duration`. Progress is suppressed and stdout has no terminal color codes. The shape matches the [API result](api.md#result).
 
-Ordinary violations in `error` mode still produce the JSON result and exit `1`. Fatal failures instead write a diagnostic to stderr, leave stdout empty, and exit `1`; they do not produce a JSON error document.
+Violations or discovery issues in `error` mode still produce the JSON result and exit `1`, without separate stderr diagnostics. Fatal failures instead write a diagnostic to stderr, leave stdout empty, and exit `1`; they do not produce a JSON error document.
 
 Output and exit logic are implemented in `handleValidateCommand()` in [command-handler.ts](../src/cli/command-handler.ts), using [output-helpers.ts](../src/cli/output-helpers.ts).
 
@@ -62,10 +62,10 @@ Output and exit logic are implemented in `handleValidateCommand()` in [command-h
 
 | Code | Meaning |
 | --- | --- |
-| `0` | Validation completed with no ordinary violations, or completed in `warn`/`off` mode |
-| `1` | Ordinary violations remain in `error` mode, or an invalid option/fatal failure occurred |
+| `0` | Validation completed with no violations or discovery issues, or completed in `warn`/`off` mode |
+| `1` | Violations or discovery issues remain in `error` mode, or an invalid option/fatal failure occurred |
 
-Main-config and exception errors remain fatal in every mode. Discovery and allowlist-file failures are fatal when those stages run; `off` with no resolved exceptions skips them. Individual malformed package manifests are omitted rather than fatal; see [scan coverage](configuration.md#scan-coverage).
+Main-config and exception errors remain fatal in every mode. Glob and allowlist-file failures are fatal when those stages run; `off` with no resolved exceptions skips them. Individual unreadable/invalid manifests are omitted from validation but reported as mode-governed discovery issues; see [scan coverage](configuration.md#scan-coverage).
 
 ## CI Integration
 

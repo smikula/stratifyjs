@@ -94,7 +94,7 @@ For machine-readable CLI output:
 npx --package=stratifyjs stratify --mode error --format json
 ```
 
-Completed validation writes one JSON result to stdout. Ordinary violations in `error` mode exit `1`; fatal errors instead use stderr with empty stdout. See the [CLI reference](docs/cli.md) for all options, output contracts, exit codes, and CI examples.
+Completed validation writes one JSON result to stdout, including separate `violations` and `discoveryIssues` arrays. Either kind of finding in `error` mode exits `1`; fatal errors instead use stderr with empty stdout. See the [CLI reference](docs/cli.md) for all options, output contracts, exit codes, and CI examples.
 
 From an ES module or TypeScript integration:
 
@@ -103,9 +103,10 @@ import { validateLayers } from 'stratifyjs';
 
 const result = await validateLayers({ workspaceRoot: '.' });
 console.log(result.violations);
+console.log(result.discoveryIssues);
 ```
 
-The API returns ordinary violations in both `warn` and `error` modes; callers decide whether to fail. See the [API reference](docs/api.md) for options, public types, accepted exceptions, mode semantics, and errors.
+The API returns ordinary violations and discovery issues in both `warn` and `error` modes; callers decide whether to fail. Discovery issues cover unreadable/invalid manifests, duplicate package names, and zero valid packages. `off` suppresses both arrays. See the [API reference](docs/api.md) for options, public types, accepted exceptions, mode semantics, and errors.
 
 ## Documentation
 

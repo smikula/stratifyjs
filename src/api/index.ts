@@ -6,6 +6,7 @@ export type { ValidateLayersOptions, ValidateLayersResult } from './api.js';
 export type {
     AcceptedDependencyException,
     DependencyException,
+    DiscoveryIssue,
     EnforcementMode,
     StratifyConfig,
     Violation,
